@@ -63,27 +63,64 @@ while (`go' == 1) {
 		local wave = "0" + "`wave'"
 	}
 	
-	//------------ create folders
+	//------------ create country/year folders
 	
 	local sname "USN"   // Unknown Survey Name
 	
 	cap mkdir "02.data/`ccode'"
-	cap mkdir "02.data/`ccode'/`ccode'_`year'_`sname'"
+	local cy_dir "`ccode'_`year'_`sname'" // country year dir
+	cap mkdir "02.data/`ccode'/`cy_dir'"
 	
-	local svid "`ccode'_`year'_`sname'_v01_M_v`wave'_A_LIS"
-	cap mkdir "02.data/`ccode'/`ccode'_`year'_`sname'/`svid'"
 	
-	local ddir "02.data/`ccode'/`ccode'_`year'_`sname'/`svid'/data" // data dir
-	cap mkdir "`ddir'"
-	
-	//========================================================
-	// get matrix into dta and save
-	//========================================================
-	
+	//------------get matrix into dta and save
 	drop _all
 	mata: T = A.get((`i',2))
 	getmata (weight welfare)=T
 	
+	char _dta[wave]       "`wave'" 
+	char _dta[id]         "`id'"
+	char _dta[author]     "`c(username)'"
+	char _dta[orig_file]  "`file'"
+	
+	
+	
+	//------------ check if file exists or if it has changed
+	cap datasignature confirm using /* 
+		*/ "02.data/`ccode'/`cy_dir'/`cy_dir'", strict
+	
+	if (_rc == 601) { // file not found
+		nois disp in y "file `id' not found. Creating folder with version 01"
+		local av = "01"  // alternative version
+	} 
+	else if (_rc == 9) {  // data have changed
+		local vers: dir "02.data/`ccode'/`cy_dir'" dirs "*", respectcase
+		
+		local avs 0
+		foreach ver of local vers {
+			if regexm("`ver'", "_v([0-9]+)_A_LIS$") loca v = regexs(1)
+			local avs = "`avs', `v'"
+		}
+		
+		local av = max(`avs') + 1
+		if (length("`av'") == 1) {
+			local av = "0" + "`av'"
+		}
+	}
+	else {
+		noi disp in y "File `id' has not changed since last time"
+		continue
+	}
+	
+	datasignature set, reset saving("02.data/`ccode'/`cy_dir'/`cy_dir'", replace)
+	
+	//------------Create versions folders
+	local svid "`cy_dir'_v01_M_v`av'_A_LIS"
+	cap mkdir "02.data/`ccode'/`cy_dir'/`svid'"
+	
+	local ddir "02.data/`ccode'/`cy_dir'/`svid'/data" // data dir
+	cap mkdir "`ddir'"
+
+
 	save "`ddir'/`svid'.dta", replace
 }
 
