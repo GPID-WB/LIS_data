@@ -16,7 +16,28 @@ Output:
               0: Program set up
 ==================================================*/
 
-local surveys "au04h us16h"  // modify this
+//------------To modify
+local silc   "de au us"  // modify this
+local nosilc "co ar br"  // modify this
+
+
+//------------Do NOT modify
+
+local countries "`silc' `nosilc'"
+numlist "1980/2018"
+local years = "`r(numlist)'"
+foreach year of loca years {
+	local y = substr("`year'", 3,.)
+	local ys "`ys' `y'"
+}
+
+
+foreach c of local countries {
+	foreach y of local ys {
+		local surveys "`surveys' `c'`y'h"
+	}
+}
+
 
 /*==================================================
               1: Program to calculate 400 bins
@@ -73,13 +94,13 @@ end
 
 
 foreach x of local surveys {
-	qui {
-	use ${`x'}, clear
+	cap {
+		use ${`x'}, clear
+		
 		local iso  = upper(iso3[1])
 		local year = year[1]
 		local wave = wave[1]
 
-		noi mata: printf("## `iso' `year' `wave'\n")
 
 		keep hid  dhi hpopwgt nhhmem 
 		gen double popw=hpopwgt*nhhmem 
@@ -87,8 +108,9 @@ foreach x of local surveys {
 
 		drop if (lcu_pc < 0 | lcu_pc >= . | popw >= .)
 	}
-
-	* _nq lcu_pc [aw = popw], nq(400) nvar(nq)
+	if (_rc) continue
+	
+	noi mata: printf("## `iso' `year' `wave'\n")
 	_nq lcu_pc [pw = popw], nq(400) nvar(nq)
 }
 
