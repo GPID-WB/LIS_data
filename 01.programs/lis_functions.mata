@@ -23,7 +23,7 @@ local SS   string scalar
 local SL   struct lis scalar
 
 mata:
-	mata drop lis*()
+	mata clear
 	
 	//========================================================
 	// create structure
@@ -54,7 +54,7 @@ mata:
 		string scalar id_s, svid
 		real scalar pos_a , pos
 		
-		id_s = "^##nv"  // survey id sign
+		id_s = "^## "  // survey id sign
 		pos = pos_a = ftell(l.fh)
 		
 		while ((svid=strtrim(fget(l.fh)))!=J(0,0,"")) {  // find end of file
@@ -70,7 +70,7 @@ mata:
 			return(strofreal(pos))
 		}
 		else {
-			svid = regexr(svid, "##nv ", "")
+			svid = regexr(svid, "## ", "")
 			return(svid)        // text line
 		}
 	}

@@ -24,14 +24,16 @@ clear all
 
 local dir "p:/01.PovcalNet/04.LIS/"
 cd "`dir'"
-do "01.programs/lis_functions.mata"
 
-forvalues n = 1(1)2 {
+foreach n of numlist 1/5 {
 
 	local file "LISSY_Dec2019_`n'.txt" // modify this
 
 //------------do NOT modify this
 	global fn = "`dir'/00.LIS_output/`file'"
+	
+	mata: mata clear
+	do "01.programs/lis_functions.mata"
 
 
 //========================================================
@@ -125,7 +127,7 @@ forvalues n = 1(1)2 {
 
 
 		save "`ddir'/`svid'.dta", replace
-	}
+	} // end of while loop 
 
 } // close loop  `n' = .txt files
 *##e
