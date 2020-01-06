@@ -25,9 +25,12 @@ clear all
 local dir "p:/01.PovcalNet/04.LIS/"
 cd "`dir'"
 
-foreach n of numlist 1/5 {
 
-	local file "LISSY_Dec2019_`n'.txt" // modify this
+local files: dir "00.LIS_output/" files "LISSY_Jan2020_*.txt"
+
+foreach file of local files {
+
+	* local file "LISSY_Dec2019_`n'.txt" // modify this
 
 //------------do NOT modify this
 	global fn = "`dir'/00.LIS_output/`file'"
@@ -80,7 +83,7 @@ foreach n of numlist 1/5 {
 		//------------get matrix into dta and save
 		drop _all
 		mata: T = A.get((`i',2))
-		getmata (weight welfare)=T
+		getmata (weight welfare min max)=T
 	
 		char _dta[wave]       "`wave'" 
 		char _dta[id]         "`id'"
