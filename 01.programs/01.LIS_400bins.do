@@ -83,7 +83,7 @@ qui {
 	
 	gen one = 1
 	
-	noi table `nvar'  [`weight' = `wgt'], c(sum one mean `varlist')  /* 
+	noi table `nvar'  [`weight' = `wgt'], c(sum one mean `varlist'  min `varlist' max `varlist')  /* 
 	 */ left concise format(%16.5f)
 	
 }
