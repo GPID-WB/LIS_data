@@ -36,6 +36,8 @@ disp `"`files'"'
 
 //------------do NOT modify this
 mata: mata clear
+
+* data with survey name
 use "02.data/_aux/LIS_survname.dta", clear
 tostring _all, force replace
 putmata LIS = (*), replace
@@ -44,8 +46,6 @@ putmata LIS = (*), replace
 local f = 0
 foreach file of local files {
 	local ++f
-
-		
 	
 	global fn = "`dir'/00.LIS_output/`file'"
 	
@@ -66,7 +66,7 @@ foreach file of local files {
 	
 	local go = 1
 	local i = 0
-	while (`go' == 1) {
+	qui while (`go' == 1) {
 		local ++i
 		
 		//------------ convert to local from AA
@@ -89,7 +89,7 @@ foreach file of local files {
 		
 		//------------ create country/year folders
 		
-		disp _n "`ccode' ${ccode} `year' `sacronym' - `sname'" _n
+		qui disp _n "`ccode' ${ccode} `year' `sacronym' - `sname'" _n
 		
 		cap mkdir "02.data/`ccode'"
 		local cy_dir "`ccode'_`year'_`sacronym'" // country year dir
@@ -106,7 +106,6 @@ foreach file of local files {
 		char _dta[author]       "`c(username)'"
 		char _dta[orig_file]    "`file'"
 		char _dta[survey_name]  "`sname'"
-		
 		
 		
 		//------------ check if file exists or if it has changed
