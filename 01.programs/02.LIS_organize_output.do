@@ -42,6 +42,8 @@ use "02.data/_aux/LIS_survname.dta", clear
 tostring _all, force replace
 putmata LIS = (*), replace
 
+local datadir "p:/01.PovcalNet/01.Vintage_control"
+
 
 local f = 0
 foreach file of local files {
@@ -91,9 +93,9 @@ foreach file of local files {
 		
 		qui disp _n "`ccode' ${ccode} `year' `sacronym' - `sname'" _n
 		
-		cap mkdir "02.data/`ccode'"
+		cap mkdir "`datadir'/`ccode'"
 		local cy_dir "`ccode'_`year'_`sacronym'" // country year dir
-		cap mkdir "02.data/`ccode'/`cy_dir'"
+		cap mkdir "`datadir'/`ccode'/`cy_dir'"
 		
 		
 		//------------get matrix into dta and save
@@ -110,18 +112,18 @@ foreach file of local files {
 		
 		//------------ check if file exists or if it has changed
 		cap datasignature confirm using /* 
-		*/ "02.data/`ccode'/`cy_dir'/`cy_dir'", strict
+		*/ "`datadir'/`ccode'/`cy_dir'/`cy_dir'", strict
 		
 		if (_rc == 601) { // file not found
 			nois disp in y "file `id' not found. Creating folder with version 01"
 			local av = "01"  // alternative version
 		} 
 		else if (_rc == 9) {  // data have changed
-			local vers: dir "02.data/`ccode'/`cy_dir'" dirs "*", respectcase
+			local vers: dir "`datadir'/`ccode'/`cy_dir'" dirs "*", respectcase
 			
 			local avs 0
 			foreach ver of local vers {
-				if regexm("`ver'", "_v([0-9]+)_A_LIS$") loca v = regexs(1)
+				if regexm("`ver'", "_v([0-9]+)_A_GMD$") loca v = regexs(1)
 				local avs = "`avs', `v'"
 			}
 			
@@ -135,17 +137,17 @@ foreach file of local files {
 			continue
 		}
 		
-		datasignature set, reset saving("02.data/`ccode'/`cy_dir'/`cy_dir'", replace)
+		datasignature set, reset saving("`datadir'/`ccode'/`cy_dir'/`cy_dir'", replace)
 		
 		//------------Create versions folders
-		local svid "`cy_dir'_v01_M_v`av'_A_LIS"
-		cap mkdir "02.data/`ccode'/`cy_dir'/`svid'"
+		local svid "`cy_dir'_v01_M_v`av'_A_GMD"
+		cap mkdir "`datadir'/`ccode'/`cy_dir'/`svid'"
 		
-		local ddir "02.data/`ccode'/`cy_dir'/`svid'/data" // data dir
+		local ddir "`datadir'/`ccode'/`cy_dir'/`svid'/data" // data dir
 		cap mkdir "`ddir'"
 		
 		
-		save "`ddir'/`svid'.dta", replace
+		save "`ddir'/`svid'_BIN.dta", replace
 	} // end of while loop 
 	
 } // close loop  `n' = .txt files
