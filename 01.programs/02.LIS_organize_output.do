@@ -58,6 +58,14 @@ foreach file of local files {
 	// extrac vectors into Associative Array
 	//========================================================
 	
+	/* This part is not efficient. File lif_functions.mata should be executed only
+	once before looping over files. I had to include it here because there is problem
+	with the structure of the Associative Array. Basicaly, once it is defined and executed, 
+	you cannot change the values. I think the problem is in the way the text files are being
+	read. Maybe they should be read outside the lis_set() function. I don't have time to
+	check and fix the the error, so I execute this file here. It is not efficient
+	but it works. */
+	
 	qui do "01.programs/lis_functions.mata"	
 	mata: `l' = lis_set()
 	mata: `A' = lis_iter(`l') 
