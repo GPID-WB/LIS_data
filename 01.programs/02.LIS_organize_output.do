@@ -21,29 +21,63 @@ discard
 clear all
 
 //------------modify this
-*local dir "c:\Users\wb384996\OneDrive - WBG\temp\04.LIS\"
+local update_surveynames = 0 // change to 1 to update survey names. 
+local use_personal_dir   = 0 // change to 1 to use personal dirs
+//---------------------------
 
-local dir "p:/01.PovcalNet/04.LIS"
-local dir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
+
+
+//------------Add personal drive cloned from github repo
+if (`use_personal_dir' == 1) {
+	if (lower("`c(username)'") == "wb384996") {
+		local dir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
+	}
+} 
+else { // if network drive 
+	local dir "p:/01.PovcalNet/04.LIS"
+}
 cd "`dir'"
+//----------------------------------------------------
 
+
+//------------ Modify this to specify different text files 
 local files: dir "00.LIS_output/" files "LISSY_Jan2020_*.txt"
 local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
-disp `"`files'"'
+* disp `"`files'"'
+//-----------------------------------------------------------
 
-* local files = `"test3.txt"'
+
+//========================================================
+// Load survey name data
+//========================================================
 
 //------------do NOT modify this
 mata: mata clear
+cap which missings
+if (_rc) ssc install missings
 
 * data with survey name
-use "02.data/_aux/LIS_survname.dta", clear
+if (`update_surveynames' == 1) {
+	* make sure file is closed
+	import excel using "02.data/_aux/LIS datasets.xlsx", sheet(LIS_survname) /* 
+	 */  firstrow case(lower) allstring clear
+	 missings dropvars, force
+
+	save "02.data/_aux/LIS_survname.dta", replace 
+}
+else { // use current version
+	use "02.data/_aux/LIS_survname.dta", clear
+}
 tostring _all, force replace
 putmata LIS = (*), replace
 
-local datadir "p:/01.PovcalNet/01.Vintage_control"
+*##e
+//========================================================
+// Start execution
+//========================================================
 
+local datadir "p:/01.PovcalNet/01.Vintage_control"
 
 local f = 0
 foreach file of local files {
@@ -55,7 +89,7 @@ foreach file of local files {
 	local l: word `f' of `c(alpha)'
 	
 	//========================================================
-	// extrac vectors into Associative Array
+	// extract vectors into Associative Array
 	//========================================================
 	
 	/* This part is not efficient. File lif_functions.mata should be executed only
@@ -163,7 +197,7 @@ foreach file of local files {
 	} // end of while loop 
 	
 } // close loop  `n' = .txt files
-*##e
+
 
 exit
 /* End of do-file */
