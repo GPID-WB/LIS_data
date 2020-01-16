@@ -135,7 +135,7 @@ foreach file of local files {
 			
 			local avs 0
 			foreach ver of local vers {
-				if regexm("`ver'", "_v([0-9]+)_A_GMD$") loca v = regexs(1)
+				if regexm("`ver'", "_v([0-9]+)_A_GMD$") local v = regexs(1)
 				local avs = "`avs', `v'"
 			}
 			
