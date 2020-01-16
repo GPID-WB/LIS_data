@@ -96,6 +96,10 @@ foreach file of local files {
 		}
 		
 		mata: lis_metadata(LIS, "`ccode'", "`year'")
+		if ("`sacronym'" == "") {
+			local sacronym = "USN-LIS" // for Unknown Survey Name-LIS
+			local sname    = "Unknown Survey Name-LIS"
+		}
 		
 		//------------ create country/year folders
 		
