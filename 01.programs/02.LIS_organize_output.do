@@ -42,7 +42,7 @@ cd "`dir'"
 
 //------------ Modify this to specify different text files 
 local files: dir "00.LIS_output/" files "LISSY_Jan2020_*.txt"
-local files: dir "00.LIS_output/" files "test*.txt"
+*local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
 * disp `"`files'"'
 //-----------------------------------------------------------
@@ -137,7 +137,7 @@ foreach file of local files {
 		
 		//------------ create country/year folders
 		
-		qui disp _n "`ccode' ${ccode} `year' `sacronym' - `sname'" _n
+		noi disp _n `"`ccode' `year' `sacronym' - `sname'"' _n
 		
 		cap mkdir "`datadir'/`ccode'"
 		local cy_dir "`ccode'_`year'_`sacronym'" // country year dir
