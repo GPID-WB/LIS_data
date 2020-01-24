@@ -20,7 +20,7 @@ Output:
 *local silc   "at be cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk" // 26 EUSILC countries
 *local nosilc "au br ca cl cn co do eg ge gt in il ci jp mx pa py pe ru za kr tw us uy vn"    // 25 rest
 
-local silc   "sk si es se ch uk"
+local silc   "sk si"
 local nosilc "kr tw us uy vn"
 
 //------------Do NOT modify
