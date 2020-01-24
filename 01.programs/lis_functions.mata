@@ -22,9 +22,9 @@ local RS   real scalar
 local SS   string scalar
 local SL   struct lis scalar
 
+
 mata:
-	mata clear
-	
+	mata drop lis*()
 	//========================================================
 	// create structure
 	//========================================================
@@ -157,6 +157,24 @@ mata:
 		fclose(l.fh)
 		return(A)
 	}
+
+	
+	void lis_metadata(string matrix LIS, 
+                    string scalar c, 
+                    string scalar y) {
+		
+		string matrix  A, B
+		
+		A = select(LIS, LIS[,1] :== c)
+		B = select(A, A[,2] :== y)
+		
+		if (rows(B) == 1) {
+			st_local("sname", B[3])	
+			st_local("sacronym", B[4])
+			st_local("scoverage", B[8])	
+		}
+	
+}
 	
 end
 
