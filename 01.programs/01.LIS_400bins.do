@@ -102,6 +102,7 @@ foreach x of local surveys {
 		local iso  = upper(iso3[1])
 		local year = year[1]
 		local wave = wave[1]
+		local currency : label currency `=currency[1]'
 
 
 		keep hid  dhi hpopwgt nhhmem 
@@ -112,7 +113,8 @@ foreach x of local surveys {
 	}
 	if (_rc) continue
 	
-	noi mata: printf("## `iso' `year' `wave'\n")
+	noi mata: printf("##1 `iso' `year' `wave'\n")
+	noi mata: printf("##2 `currency'\n")
 	_nq lcu_pc [pw = popw], nq(400) nvar(nq)
 }
 
