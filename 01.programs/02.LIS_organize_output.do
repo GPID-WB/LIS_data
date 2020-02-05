@@ -23,9 +23,8 @@ clear all
 //------------modify this
 local update_surveynames = 0 // change to 1 to update survey names. 
 local use_personal_dir   = 0 // change to 1 to use personal dirs
+local replace            = 0 // change to 1 to replace data in memory even if it hasnot changed
 //---------------------------
-
-
 
 //------------Add personal drive cloned from github repo
 if (`use_personal_dir' == 1) {
@@ -117,7 +116,12 @@ foreach file of local files {
 		cap mata: st_local("id", `A'.get((`i',1)))
 		if (_rc != 0 | wordcount("`id'") != 3) {
 			continue, break
-		} 
+		}
+		//------------Currency info
+		cap mata: st_local("currency", `A'.get((`i',3)))
+		if (_rc != 0) {
+			continue, break
+		}
 		
 		//------------ get info 
 		
@@ -154,6 +158,7 @@ foreach file of local files {
 		char _dta[author]       "`c(username)'"
 		char _dta[orig_file]    "`file'"
 		char _dta[survey_name]  "`sname'"
+		char _dta[currency]     "`currency'"
 		
 		
 		//------------ check if file exists or if it has changed
@@ -180,7 +185,12 @@ foreach file of local files {
 		}
 		else {
 			noi disp in y "File `id' has not changed since last time"
-			continue
+			if (`replace' == 1) {
+				noi disp in y "Yet, it will be replaced since option replace == 1"
+			}
+			else {
+				continue
+			}
 		}
 		
 		datasignature set, reset saving("`datadir'/`ccode'/`cy_dir'/`cy_dir'", replace)

@@ -54,12 +54,12 @@ mata:
 		string scalar id_s, svid
 		real scalar pos_a , pos
 		
-		id_s = "^## "  // survey id sign
+		id_s = "^##1 "  // survey id sign
 		pos = pos_a = ftell(l.fh)
 		
 		while ((svid=strtrim(fget(l.fh)))!=J(0,0,"")) {  // find end of file
 			if (regexm(svid, id_s)) {           // check if condition meets
-				fseek(l.fh, pos, -1)                       // re positioning l.fh to line that meets criteria
+				fseek(l.fh, pos, -1)              // re positioning l.fh to line that meets criteria
 				break
 			}
 			pos = ftell(l.fh)              // store old position if criteria does not meet
@@ -70,8 +70,38 @@ mata:
 			return(strofreal(pos))
 		}
 		else {
-			svid = regexr(svid, "## ", "")
+			svid = regexr(svid, id_s, "")
 			return(svid)        // text line
+		}
+	}
+	
+	//========================================================
+	//  Country currency
+	//========================================================
+	
+	`SS' lis_currency (`SL' l) {
+		
+		string scalar id_s, crcy
+		real scalar pos_a , pos
+		
+		id_s = "^##2 "  // survey id sign
+		pos = pos_a = ftell(l.fh)
+		
+		while ((crcy=strtrim(fget(l.fh)))!=J(0,0,"")) {  // find end of file
+			if (regexm(crcy, id_s)) {           // check if condition meets
+				fseek(l.fh, pos, -1)              // re positioning l.fh to line that meets criteria
+				break
+			}
+			pos = ftell(l.fh)              // store old position if criteria does not meet
+		}
+		
+		//------------return results
+		if (rows(crcy) == 0 ) {
+			return(strofreal(pos))
+		}
+		else {
+			crcy = regexr(crcy, id_s, "")
+			return(crcy)        // text line
 		}
 	}
 	
@@ -153,6 +183,7 @@ mata:
 			
 			A.put((l.i, 1), lis_svid(l)) 
 			A.put((l.i, 2), lis_bins(l)) 
+			A.put((l.i, 3), lis_currency(l)) 
 		}
 		fclose(l.fh)
 		return(A)
