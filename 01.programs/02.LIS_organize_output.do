@@ -21,13 +21,14 @@ discard
 clear all
 
 //------------modify this
-local update_surveynames = 0 // change to 1 to update survey names. 
-local use_personal_dir   = 0 // change to 1 to use personal dirs
-local replace            = 0 // change to 1 to replace data in memory even if it hasnot changed
+local update_surveynames = 0  // change to 1 to update survey names. 
+local code_personal_dir  = 1  // change to 1 to use Code personal dir
+local data_personal_dir  = 0  // change to 1 to use Data personal dir
+local replace            = 1  // change to 1 to replace data in memory even if it hasnot changed
 //---------------------------
 
 //------------Add personal drive cloned from github repo
-if (`use_personal_dir' == 1) {
+if (`data_personal_dir' == 1) {
 	if (lower("`c(username)'") == "wb384996") {
 		local dir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
 	}
@@ -36,12 +37,20 @@ else { // if network drive
 	local dir "p:/01.PovcalNet/04.LIS"
 }
 cd "`dir'"
+if (`code_personal_dir' == 1) {
+	if (lower("`c(username)'") == "wb384996") {
+		local perdir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data/"
+	}
+}
+else {
+	local perdir ""
+}
 //----------------------------------------------------
 
 
 //------------ Modify this to specify different text files 
-local files: dir "00.LIS_output/" files "LISSY_Jan2020_*.txt"
-*local files: dir "00.LIS_output/" files "test*.txt"
+* local files: dir "00.LIS_output/" files "LISSY_Jan2020_*.txt"
+local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
 * disp `"`files'"'
 //-----------------------------------------------------------
@@ -60,9 +69,9 @@ if (_rc) ssc install missings
 if (`update_surveynames' == 1) {
 	* make sure file is closed
 	import excel using "02.data/_aux/LIS datasets.xlsx", sheet(LIS_survname) /* 
-	 */  firstrow case(lower) allstring clear
-	 missings dropvars, force
-
+	*/  firstrow case(lower) allstring clear
+	missings dropvars, force
+	
 	save "02.data/_aux/LIS_survname.dta", replace 
 }
 else { // use current version
@@ -76,7 +85,7 @@ putmata LIS = (*), replace
 // Start execution
 //========================================================
 
-local datadir "p:/01.PovcalNet/01.Vintage_control"
+local outputdit "p:/01.PovcalNet/01.Vintage_control"
 
 local f = 0
 foreach file of local files {
@@ -99,7 +108,7 @@ foreach file of local files {
 	check and fix the the error, so I execute this file here. It is not efficient
 	but it works. */
 	
-	qui do "01.programs/lis_functions.mata"	
+	qui do "`perdir'01.programs/lis_functions.mata"	
 	mata: `l' = lis_set()
 	mata: `A' = lis_iter(`l') 
 	
@@ -143,9 +152,9 @@ foreach file of local files {
 		
 		noi disp _n `"`ccode' `year' `sacronym' - `sname'"' _n
 		
-		cap mkdir "`datadir'/`ccode'"
+		cap mkdir "`outputdit'/`ccode'"
 		local cy_dir "`ccode'_`year'_`sacronym'" // country year dir
-		cap mkdir "`datadir'/`ccode'/`cy_dir'"
+		cap mkdir "`outputdit'/`ccode'/`cy_dir'"
 		
 		
 		//------------get matrix into dta and save
@@ -163,14 +172,16 @@ foreach file of local files {
 		
 		//------------ check if file exists or if it has changed
 		cap datasignature confirm using /* 
-		*/ "`datadir'/`ccode'/`cy_dir'/`cy_dir'", strict
+		*/ "`outputdit'/`ccode'/`cy_dir'/`cy_dir'", strict
+		local rcds = _rc
 		
-		if (_rc == 601) { // file not found
+		if (`rcds' == 601) { // file not found
 			nois disp in y "file `id' not found. Creating folder with version 01"
 			local av = "01"  // alternative version
 		} 
-		else if (_rc == 9) {  // data have changed
-			local vers: dir "`datadir'/`ccode'/`cy_dir'" dirs "*", respectcase
+		else { // file found
+			// find versions available 
+			local vers: dir "`outputdit'/`ccode'/`cy_dir'" dirs "*", respectcase
 			
 			local avs 0
 			foreach ver of local vers {
@@ -178,33 +189,39 @@ foreach file of local files {
 				local avs = "`avs', `v'"
 			}
 			
-			local av = max(`avs') + 1
+			if (`rcds' == 9) {  // data has changed
+				local av = max(`avs') + 1
+			} 
+			else {              // data has not changed      
+				noi disp in y "File `id' has not changed since last time"
+				if (`replace' == 1) {
+					noi disp in y "Yet, it will be replaced since option replace == 1"
+				}
+				else {
+					continue
+				}
+				local av = max(`avs')
+			} // end of data has not changed
+			
+			// final version number
 			if (length("`av'") == 1) {
 				local av = "0" + "`av'"
 			}
-		}
-		else {
-			noi disp in y "File `id' has not changed since last time"
-			if (`replace' == 1) {
-				noi disp in y "Yet, it will be replaced since option replace == 1"
-			}
-			else {
-				continue
-			}
-		}
+		} // end of file found
 		
-		datasignature set, reset saving("`datadir'/`ccode'/`cy_dir'/`cy_dir'", replace)
+		
+		datasignature set, reset saving("`outputdit'/`ccode'/`cy_dir'/`cy_dir'", replace)
 		
 		//------------Create versions folders
 		local svid "`cy_dir'_v01_M_v`av'_A_GMD"
-		cap mkdir "`datadir'/`ccode'/`cy_dir'/`svid'"
+		cap mkdir "`outputdit'/`ccode'/`cy_dir'/`svid'"
 		
-		local ddir "`datadir'/`ccode'/`cy_dir'/`svid'/data" // data dir
+		local ddir "`outputdit'/`ccode'/`cy_dir'/`svid'/data" // data dir
 		cap mkdir "`ddir'"
 		
 		
 		save "`ddir'/`svid'_BIN.dta", replace
-	} // end of while loop 
+	} // end of while loop  
 	
 } // close loop  `n' = .txt files
 

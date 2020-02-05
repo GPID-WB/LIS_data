@@ -181,9 +181,10 @@ mata:
 			
 			l.i = l.i + 1
 			
+			// the order matters
 			A.put((l.i, 1), lis_svid(l)) 
-			A.put((l.i, 2), lis_bins(l)) 
 			A.put((l.i, 3), lis_currency(l)) 
+			A.put((l.i, 2), lis_bins(l)) 
 		}
 		fclose(l.fh)
 		return(A)
