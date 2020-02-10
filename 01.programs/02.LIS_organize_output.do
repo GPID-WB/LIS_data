@@ -49,8 +49,8 @@ else {
 
 
 //------------ Modify this to specify different text files 
-* local files: dir "00.LIS_output/" files "LISSY_Jan2020_*.txt"
-local files: dir "00.LIS_output/" files "test*.txt"
+local files: dir "00.LIS_output/" files "LISSY_2020-02-06*.txt"
+* local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
 * disp `"`files'"'
 //-----------------------------------------------------------
@@ -168,6 +168,20 @@ foreach file of local files {
 		char _dta[orig_file]    "`file'"
 		char _dta[survey_name]  "`sname'"
 		char _dta[currency]     "`currency'"
+		
+		//------------Conver euro to LCU
+		if regexm("`currency'", "[Ee]uro") {
+			preserve
+			pcn load cpi, clear
+			keep if countrycode == "`country'" & year == `year'
+			if (_N == 1) {
+				local ccf  = cur_adj[1]
+				restore
+				replace welfare = (welfare / `ccf')
+				char _dta[currency]     "LCU"  // update with master info
+			} 
+			else restore
+		}
 		
 		
 		//------------ check if file exists or if it has changed
