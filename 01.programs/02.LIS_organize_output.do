@@ -50,6 +50,7 @@ else {
 
 //------------ Modify this to specify different text files
 local files: dir "00.LIS_output/" files "LISSY_2020-02-06*.txt"
+* local files: dir "00.LIS_output/" files "LISSY_2020-02-06_3.txt"
 * local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
 * disp `"`files'"'

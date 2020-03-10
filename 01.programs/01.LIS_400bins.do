@@ -107,7 +107,7 @@ foreach x of local surveys {
 
 		keep hid  dhi hpopwgt nhhmem 
 		gen double popw=hpopwgt*nhhmem 
-		gen double lcu_pc = (dhi/nhhmem)/12
+		gen double lcu_pc = (dhi/nhhmem) // leave it annual per capita
 
 		drop if (lcu_pc < 0 | lcu_pc >= . | popw >= .)
 	}
