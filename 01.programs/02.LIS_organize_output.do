@@ -21,25 +21,25 @@ discard
 clear all
 
 //------------modify this
-local update_surveynames = 0  // change to 1 to update survey names.
+local update_surveynames = 1  // change to 1 to update survey names.
 local code_personal_dir  = 1  // change to 1 to use Code personal dir
 local data_personal_dir  = 0  // change to 1 to use Data personal dir
-local replace            = 1  // change to 1 to replace data in memory even if it hasnot changed
+local replace            = 0  // change to 1 to replace data in memory even if it hasnot changed
 //---------------------------
 
 //------------Add personal drive cloned from github repo
 if (`data_personal_dir' == 1) {
-	if (lower("`c(username)'") == "wb384996") {
-		local dir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
+	if (lower("`c(username)'") == "wb562356") {
+		local dir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
 	}
 }
 else { // if network drive
-	local dir "p:/01.PovcalNet/04.LIS"
+	local dir "p:/01.PovcalNet/03.QA/06.LIS"
 }
 cd "`dir'"
 if (`code_personal_dir' == 1) {
-	if (lower("`c(username)'") == "wb384996") {
-		local perdir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data/"
+	if (lower("`c(username)'") == "wb562356") {
+		local perdir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
 	}
 }
 else {
@@ -49,7 +49,7 @@ else {
 
 
 //------------ Modify this to specify different text files
-local files: dir "00.LIS_output/" files "LISSY_2020-02-06*.txt"
+local files: dir "00.LIS_output/" files "LISSY_2020-06-15.txt"
 * local files: dir "00.LIS_output/" files "LISSY_2020-02-06_3.txt"
 * local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
@@ -79,8 +79,8 @@ else { // use current version
 	use "02.data/_aux/LIS_survname.dta", clear
 }
 tostring _all, force replace
-putmata LIS = (*), replace
-
+*putmata LIS = (*), replace
+putmata LIS = (code -welfare_type), replace
 *##e
 //========================================================
 // Start execution
@@ -194,9 +194,9 @@ foreach file of local files {
 
 		if (`rcds' == 601) { // file not found
 			nois disp in y "file `id' not found. Creating folder with version 01"
-			local av = "01"  // alternative version
-		}
-		else { // file found
+			*local av = "01"  // alternative version
+		*}
+		*else { // file found
 			// find versions available
 			local vers: dir "`outputdit'/`ccode'/`cy_dir'" dirs "*", respectcase
 
@@ -206,7 +206,7 @@ foreach file of local files {
 				local avs = "`avs', `v'"
 			}
 
-			if (`rcds' == 9) {  // data has changed
+			if inlist(`rcds',9,601) {  // data has changed
 				local av = max(`avs') + 1
 			}
 			else {              // data has not changed
