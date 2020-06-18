@@ -72,7 +72,7 @@ if (`update_surveynames' == 1) {
 	import excel using "02.data/_aux/LIS datasets.xlsx", sheet(LIS_survname) /*
 	*/  firstrow case(lower) allstring clear
 	missings dropvars, force
-
+	
 	save "02.data/_aux/LIS_survname.dta", replace
 }
 else { // use current version
@@ -91,16 +91,16 @@ local outputdit "p:/01.PovcalNet/01.Vintage_control"
 local f = 0
 foreach file of local files {
 	local ++f
-
+	
 	global fn = "`dir'/00.LIS_output/`file'"
-
+	
 	local A: word `f' of `c(ALPHA)'
 	local l: word `f' of `c(alpha)'
-
+	
 	//========================================================
 	// extract vectors into Associative Array
 	//========================================================
-
+	
 	/* This part is not efficient. File lif_functions.mata should be executed only
 	once before looping over files. I had to include it here because there is problem
 	with the structure of the Associative Array. Basicaly, once it is defined and executed,
@@ -108,20 +108,20 @@ foreach file of local files {
 	read. Maybe they should be read outside the lis_set() function. I don't have time to
 	check and fix the the error, so I execute this file here. It is not efficient
 	but it works. */
-
+	
 	qui do "`perdir'01.programs/lis_functions.mata"
 	mata: `l' = lis_set()
 	mata: `A' = lis_iter(`l')
-
+	
 	//========================================================
 	// convert to dta and place in corresponding folder
 	//========================================================
-
+	
 	local go = 1
 	local i = 0
 	qui while (`go' == 1) {
 		local ++i
-
+		
 		//------------ convert to local from AA
 		cap mata: st_local("id", `A'.get((`i',1)))
 		if (_rc != 0 | wordcount("`id'") != 3) {
@@ -132,37 +132,37 @@ foreach file of local files {
 		if (_rc != 0) {
 			continue, break
 		}
-
+		
 		//------------ get info
-
+		
 		local ccode: word 1 of `id'
 		local year:  word 2 of `id'
 		local wave:  word 3 of `id'
-
+		
 		if (length("`wave'") == 1) {
 			local wave = "0" + "`wave'"
 		}
-
+		
 		mata: lis_metadata(LIS, "`ccode'", "`year'")
 		if ("`sacronym'" == "") {
 			local sacronym = "USN-LIS" // for Unknown Survey Name-LIS
 			local sname    = "Unknown Survey Name-LIS"
 		}
-
+		
 		//------------ create country/year folders
-
+		
 		noi disp _n `"`ccode' `year' `sacronym' - `sname'"' _n
-
+		
 		cap mkdir "`outputdit'/`ccode'"
 		local cy_dir "`ccode'_`year'_`sacronym'" // country year dir
 		cap mkdir "`outputdit'/`ccode'/`cy_dir'"
-
-
+		
+		
 		//------------get matrix into dta and save
 		drop _all
 		mata: T = `A'.get((`i',2))
 		getmata (weight welfare min max)=T
-
+		
 		char _dta[wave]         "`wave'"
 		char _dta[id]           "`id'"
 		char _dta[author]       "`c(username)'"
@@ -170,7 +170,7 @@ foreach file of local files {
 		char _dta[survey_name]  "`sname'"
 		char _dta[currency]     "`currency'"
 		char _dta[udpatedon]    "`c(current_date)' `c(current_time)'"
-
+		
 		//------------Conver euro to LCU
 		if regexm("`currency'", "[Ee]uro") {
 			preserve
@@ -186,26 +186,29 @@ foreach file of local files {
 			}
 			else restore
 		}
-
+		
 		//------------ check if file exists or if it has changed
 		cap datasignature confirm using /*
 		*/ "`outputdit'/`ccode'/`cy_dir'/`cy_dir'", strict
 		local rcds = _rc
-
+		
 		if (`rcds' == 601) { // file not found
-			nois disp in y "file `id' not found. Creating folder with version 01"
-			*local av = "01"  // alternative version
-		*}
-		*else { // file found
-			// find versions available
-			local vers: dir "`outputdit'/`ccode'/`cy_dir'" dirs "*", respectcase
-
+			nois disp in y "file `id' not found." 
+		}	
+		// find versions available
+		local vers: dir "`outputdit'/`ccode'/`cy_dir'" dirs "*", respectcase
+		
+		if (`"`vers'"' == `""') {  // if no folder available
+			local av = "01"  // alternative version	
+			nois disp in y "Creating folder with version 01 if there is no folder available"
+		} 
+		else {  // if some folders are available
 			local avs 0
 			foreach ver of local vers {
 				if regexm("`ver'", "_v([0-9]+)_A_GMD$") local v = regexs(1)
 				local avs = "`avs', `v'"
 			}
-
+			
 			if inlist(`rcds',9,601) {  // data has changed
 				local av = max(`avs') + 1
 			}
@@ -219,27 +222,28 @@ foreach file of local files {
 				}
 				local av = max(`avs')
 			} // end of data has not changed
-
+			
 			// final version number
 			if (length("`av'") == 1) {
 				local av = "0" + "`av'"
 			}
-		} // end of file found
-
-
+			nois disp in y "Creating folder with version `av' if there is no folder available"
+		} // end of creating new version of files
+		
+		
 		datasignature set, reset saving("`outputdit'/`ccode'/`cy_dir'/`cy_dir'", replace)
-
+		
 		//------------Create versions folders
 		local svid "`cy_dir'_v01_M_v`av'_A_GMD"
 		cap mkdir "`outputdit'/`ccode'/`cy_dir'/`svid'"
-
+		
 		local ddir "`outputdit'/`ccode'/`cy_dir'/`svid'/data" // data dir
 		cap mkdir "`ddir'"
-
-
+		
+		
 		save "`ddir'/`svid'_BIN.dta", replace
 	} // end of while loop
-
+	
 } // close loop  `n' = .txt files
 
 
@@ -259,7 +263,8 @@ Version Control:
 
 
 // F = lis_svid(l)
-//G = lis_bins(l)
-
-
-
+	//G = lis_bins(l)
+	
+	
+	
+		
