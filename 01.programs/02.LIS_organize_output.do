@@ -24,13 +24,17 @@ clear all
 local update_surveynames = 1  // change to 1 to update survey names.
 local code_personal_dir  = 1  // change to 1 to use Code personal dir
 local data_personal_dir  = 0  // change to 1 to use Data personal dir
-local replace            = 0  // change to 1 to replace data in memory even if it hasnot changed
+local replace           = 0  // change to 1 to replace data in memory even if it hasnot changed
+local p_drive_output_dir = 0   // change to 1 to use default Vintage_control folder
 //---------------------------
 
 //------------Add personal drive cloned from github repo
 if (`data_personal_dir' == 1) {
 	if (lower("`c(username)'") == "wb562356") {
 		local dir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
+	}
+	if (lower("`c(username)'") == "wb463998") {
+		local dir "C:\Users\wb463998\OneDrive - WBG\GIT\LIS_data"
 	}
 }
 else { // if network drive
@@ -41,6 +45,9 @@ if (`code_personal_dir' == 1) {
 	if (lower("`c(username)'") == "wb562356") {
 		local perdir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
 	}
+	if (lower("`c(username)'") == "wb463998") {
+		local perdir "C:\Users\wb463998\OneDrive - WBG\GIT\LIS_data"
+	}
 }
 else {
 	local perdir ""
@@ -49,7 +56,7 @@ else {
 
 
 //------------ Modify this to specify different text files
-local files: dir "00.LIS_output/" files "LISSY_2020-06-15.txt"
+local files: dir "00.LIS_output/" files "LISSY_Oct 14 2020.txt"
 * local files: dir "00.LIS_output/" files "LISSY_2020-02-06_3.txt"
 * local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
@@ -85,8 +92,12 @@ putmata LIS = (code -welfare_type), replace
 //========================================================
 // Start execution
 //========================================================
-
-local outputdit "p:/01.PovcalNet/01.Vintage_control"
+if (`p_drive_output_dir' == 1) {
+     local outputdit "p:/01.PovcalNet/01.Vintage_control"
+}
+else {
+    local outputdit "P:\01.PovcalNet\03.QA\06.LIS\03.Vintage_control"
+}
 
 local f = 0
 foreach file of local files {
