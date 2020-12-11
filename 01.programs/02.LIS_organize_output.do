@@ -16,15 +16,15 @@ Output:
 0: Program set up
 ==================================================*/
 *##s
-* version 14
+version 16
 discard
 clear all
 
 //------------modify this
 local update_surveynames = 1  // change to 1 to update survey names.
 local code_personal_dir  = 1  // change to 1 to use Code personal dir
-local data_personal_dir  = 0  // change to 1 to use Data personal dir
-local replace           = 0  // change to 1 to replace data in memory even if it hasnot changed
+local data_personal_dir  = 1  // change to 1 to use Data personal dir
+local replace            = 0  // change to 1 to replace data in memory even if it hasnot changed
 local p_drive_output_dir = 0   // change to 1 to use default Vintage_control folder
 //---------------------------
 
@@ -36,6 +36,10 @@ if (`data_personal_dir' == 1) {
 	if (lower("`c(username)'") == "wb463998") {
 		local dir "C:\Users\wb463998\OneDrive - WBG\GIT\LIS_data"
 	}
+	if (lower("`c(username)'") == "wb384996") {
+		local dir "c:\Users\wb384996\OneDrive - WBG\WorldBank\DECDG\PovcalNet Team\LIS_data\"
+	}
+	
 }
 else { // if network drive
 	local dir "p:/01.PovcalNet/03.QA/06.LIS"
@@ -56,11 +60,12 @@ else {
 
 
 //------------ Modify this to specify different text files
-local files: dir "00.LIS_output/" files "LISSY_Oct 14 2020.txt"
+local files: dir "00.LIS_output/" files "LISSY_2020-10-14.txt"
 * local files: dir "00.LIS_output/" files "LISSY_2020-02-06_3.txt"
 * local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
-* disp `"`files'"'
+disp `"`files'"'
+*##e
 //-----------------------------------------------------------
 
 
@@ -88,7 +93,7 @@ else { // use current version
 tostring _all, force replace
 *putmata LIS = (*), replace
 putmata LIS = (code -welfare_type), replace
-*##e
+
 //========================================================
 // Start execution
 //========================================================
