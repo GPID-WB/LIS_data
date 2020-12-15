@@ -20,16 +20,17 @@ Output:
 *local silc   "at be cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk" // 26 EUSILC countries
 *local nosilc "au br ca cl cn co do eg ge gt in il ci jp mx ps pa py pe ru za kr tw us uy vn" // 26 rest
 
-*local silc   "sk si es se ch uk"
-*local nosilc "kr tw us uy vn"
+local silc   "at be cz"
+local nosilc "au br"
+/* 
 local surveys "us13 us16 de15 de16 il16 il14"
 local y = substr("`surveys'", 3,.)
 local year "20`y'"
 local surveys: subinstr local surveys " " "h ", all
 local surveys "`surveys'h"
-
+*/
 //------------Do NOT modify
-/*
+
 local countries "`silc' `nosilc'"
 numlist "1967/2018"
 local years = "`r(numlist)'"
@@ -38,13 +39,11 @@ foreach year of loca years {
 	local ys "`ys' `y'"
 }
 
-
 foreach c of local countries {
 	foreach y of local ys {
 		local surveys "`surveys' `c'`y'h"
 	}
 }
-*/
 
 /*==================================================
               1: Program to calculate 400 bins
