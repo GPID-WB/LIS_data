@@ -21,11 +21,11 @@ discard
 clear all
 
 //------------modify this
-local update_surveynames = 1  // change to 1 to update survey names.
-local code_personal_dir  = 1  // change to 1 to use Code personal dir
-local data_personal_dir  = 1  // change to 1 to use Data personal dir
-local replace            = 0  // change to 1 to replace data in memory even if it hasnot changed
-local p_drive_output_dir = 0   // change to 1 to use default Vintage_control folder
+local update_surveynames = 1   // 1 to update survey names.
+local code_personal_dir  = 1   // 1 to use Code personal dir
+local data_personal_dir  = 1   // 1 to use Data personal dir
+local replace            = 0   // 1 to replace data in memory even if it has not changed
+local p_drive_output_dir = 0   // 1 to use default Vintage_control folder
 //---------------------------
 
 //------------Add personal drive cloned from github repo
@@ -60,7 +60,7 @@ else {
 
 
 //------------ Modify this to specify different text files
-local files: dir "00.LIS_output/" files "LISSY_2020-10-14.txt"
+local files: dir "00.LIS_output/" files "LISSY_Dec2020*.txt"
 * local files: dir "00.LIS_output/" files "LISSY_2020-02-06_3.txt"
 * local files: dir "00.LIS_output/" files "test*.txt"
 * local files = "test2.txt"
