@@ -27,19 +27,40 @@ cap frame create cpi
 //------------main directory with LIS data
 global maindir "//wbntpcifs/povcalnet/01.PovcalNet/03.QA/06.LIS/03.Vintage_control/"
 
+
+//------------Personal directory
+if (lower("`c(username)'") == "wb562356") {
+	global pdir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
+}
+if (lower("`c(username)'") == "wb463998") {
+	global pdir "C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data"
+}
+if (lower("`c(username)'") == "wb384996") {
+	global pdir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
+}
+
+
+//------------ Make sure rcall is installed
+cap which rcall
+if (_rc) {
+	cap which github
+	if (_rc) {
+		net install github, from("https://haghish.github.io/github/")
+	}
+	github install haghish/rcall, stable
+}
+
 /*=================================================
 1: Get repo from Datalibweb
 ==================================================*/
+drop _all
+frame repo {
+	rcall vanilla: source("${pdir}/01.programs/LIS_inventory.R");  ///
+	st.load(dt)
+}
+
 
 frame repo {
-	qui cap datalibweb, type(GMD)  module(BIN) repo(create dlwrepo)
-	if (_rc) {
-		qui cap datalibweb, type(GMD) repo(erase dlwrepo, force)
-		qui cap datalibweb, type(GMD)  module(BIN) repo(create dlwrepo)
-	}
-	qui cap datalibweb, type(GMD) module(BIN) repo(erase dlwrepo, force)
-	
-	rename (country years survname) (country_code surveyid_year survey_acronym)
 	gen vermast_int = regexs(1) if regexm(vermast, "[Vv]([0-9]+)")
 	gen veralt_int  = regexs(1) if regexm(veralt, "[Vv]([0-9]+)")
 	destring vermast_int veralt_int, replace force
@@ -55,6 +76,7 @@ frame repo {
 
 //------------ CPI DATA
 *##s
+
 frame cpi: {
 	use "\\wbgfscifs01\GPWG-GMD\Datalib\GMD-DLW\Support\Support_2005_CPI\Support_2005_CPI_v04_M\Data\Stata\Final_CPI_PPP_to_be_used.dta", clear
 	gen double curr = cpi2011 /cpi2011_unadj /cur_adj
