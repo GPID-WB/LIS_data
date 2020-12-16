@@ -54,17 +54,17 @@ frame repo {
 
 
 //------------ CPI DATA
-
+*##s
 frame cpi: {
 	use "\\wbgfscifs01\GPWG-GMD\Datalib\GMD-DLW\Support\Support_2005_CPI\Support_2005_CPI_v04_M\Data\Stata\Final_CPI_PPP_to_be_used.dta", clear
-	gen double curr = cpi2011 /cpi2011_unadj
+	gen double curr = cpi2011 /cpi2011_unadj /cur_adj
 	sort code year datalevel survname
 }
 
 /*==================================================
 2:  Loop over repo data
 ==================================================*/
-*##s
+
 frame change default
 frame repo {
 	local n = _N
@@ -75,7 +75,7 @@ frame repo {
 
 cap frame drop res 
 frame create res  str20 (country_code  surveyid_year survey_acronym) ///
-	double (wfdlw wfpcn wtdlw wtpcn) str25 note
+double (wfdlw wfpcn wtdlw wtpcn) str25 note
 
 local i = 0
 * local n = `i'  // to delete
@@ -96,27 +96,10 @@ qui while (`i' <= `n') {
 		}
 	}
 	
-	//------------load dlw data base and get the mean of welfare and weight
-	frame dlw {
-		qui cap datalibweb, country(`country_code') year(`surveyid_year') type(GMD)  ///
-		survey(`survey_acronym') module(BIN)
-		
-		if (_rc) {
-			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-			(.) (.) (.) (.)  ("Error in Datalibweb")
-			noi _dots `i' 2
-			continue
-		}
-		
-		sum welfare, meanonly
-		local wfdlw  = r(mean)
-		
-		sum weight, meanonly
-		local wtdlw = r(mean)
-		
-	}	
+	//========================================================
+	//  load PCN data and get mean of welfare and weight
+	//========================================================
 	
-	//------------ load PCN data and get mean of welfare and weight
 	cap pcn load, countr(`country_code') year(`surveyid_year') ///
 	maindir("${maindir}") clear
 	
@@ -146,12 +129,38 @@ qui while (`i' <= `n') {
 	
 	sum welfare, meanonly
 	local wfpcn = r(mean)
-		
+	
 	sum weight, meanonly
 	local wtpcn  = r(mean)
 	
 	
-	//------------ save means in external frame 
+	//========================================================
+	//  load dlw data base and get the mean of welfare and weight
+	//========================================================
+	
+	frame dlw {
+		qui cap datalibweb, country(`country_code') year(`surveyid_year') type(GMD)  ///
+		survey(`survey_acronym') module(BIN)
+		
+		if (_rc) {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			(.) (.) (.) (.)  ("Error in Datalibweb")
+			noi _dots `i' 1
+			continue
+		}
+		
+		sum welfare, meanonly
+		local wfdlw  = r(mean)
+		
+		sum weight, meanonly
+		local wtdlw = r(mean)
+		
+	}	
+	
+	//========================================================
+	//  save means in external frame 
+	//========================================================
+	
 	frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
 	(`wfdlw') (`wfpcn') (`wtdlw') (`wtpcn')	("passed")
 	noi _dots `i' 0
@@ -167,6 +176,7 @@ Read results
 frame res {
 	gen wf = wfdlw/wfpcn
 	gen wt = wtdlw/wtpcn
+	save results2, replace
 }
 
 
