@@ -57,3 +57,5 @@ dt[,
        ]
 
 
+dt <- dt[!grep("_control/_.*", orig)]
+
