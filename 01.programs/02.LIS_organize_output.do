@@ -90,6 +90,7 @@ frame txt {
 	all_frames <- rbindlist(ls_frames, use.names = TRUE,fill = TRUE); ///
 	st.load(all_frames)
 	destring weight welfare min max, replace force
+	save "02.data/LIStxt_2_dta_temp.dta", replace
 }
 
 //========================================================
@@ -157,8 +158,17 @@ qui while (`i' <= `n') {
 	//========================================================
 	
 	foreach var of local invvars {
+		local `var' ""
 		local `var' = _frval(inv, `var', `i')
 	}
+	
+	if ("`survey_acronym'" == "") {
+		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+				("No Survey name available")
+				noi _dots `i' 1
+				continue
+	}
+	
 	
 	frame copy txt wrk, replace // working frame 
 	frame wrk {
@@ -289,6 +299,7 @@ qui while (`i' <= `n') {
 } // end of while loop 
 
 frame change res
+save "02.data/create_dta_status.dta", replace
 
 *##e
 
