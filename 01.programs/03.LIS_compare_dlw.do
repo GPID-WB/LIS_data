@@ -22,6 +22,7 @@ drop _all
 cap frame create dlw
 cap frame create repo
 cap frame create cpi
+cap frame create ctr
 
 
 //------------main directory with LIS data
@@ -53,6 +54,16 @@ if (_rc) {
 /*=================================================
 1: Get repo from Datalibweb
 ==================================================*/
+
+//------------ Countries inventory
+drop _all
+frame ctr {
+	datalibweb_inventory
+	rename countrycode country_code
+	sort country_code
+}
+
+//------------ LIS inventory
 drop _all
 frame repo {
 	rcall vanilla: source("${pdir}/01.programs/LIS_inventory.R");  ///
@@ -71,22 +82,41 @@ frame repo {
 	
 	bysort country_code surveyid_year survey_acronym: egen `malt'  = max(veralt_int)
 	keep if `malt'  == veralt_int
+	
+	// Link with countries frame
+	frlink m:1 country_code, frame(ctr)
+	frget countryname region, from(ctr)
+	
+}
+
+//------------ Cases to be added to DLW
+frame repo {	
+	destring surveyid_year, gen(year)
+	
+	local the7 = "AUS|CAN|ISR|JPN|KOR|TWN|USA"
+	gen to_keep = .
+	replace to_keep = 1 if regexm(country_code, "`the7'")
+	replace to_keep = 1 if regexm(survey_acronym, "SILC") & year <= 2002
+	replace to_keep = 1 if country_code == "DEU" & year >= 1991
+	replace to_keep = 1 if country_code == "GBR" & year <= 2003
+	keep if to_keep == 1
 }
 
 
 //------------ CPI DATA
-*##s
+
 
 frame cpi: {
 	use "\\wbgfscifs01\GPWG-GMD\Datalib\GMD-DLW\Support\Support_2005_CPI\Support_2005_CPI_v04_M\Data\Stata\Final_CPI_PPP_to_be_used.dta", clear
-	gen double curr = cpi2011 /cpi2011_unadj /cur_adj
 	sort code year datalevel survname
 }
+
 
 /*==================================================
 2:  Loop over repo data
 ==================================================*/
 
+*##s
 frame change default
 frame repo {
 	local n = _N
@@ -127,7 +157,7 @@ qui while (`i' <= `n') {
 	
 	if (_rc) {
 		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-		(.) (.) (.) (.)  ("Error in pcn load")
+		(.) (.) (.) (.)  ("Error in PCN")
 		noi _dots `i' 2
 		continue
 	}
@@ -143,11 +173,9 @@ qui while (`i' <= `n') {
 	if (_rc) {
 		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
 		(.) (.) (.) (.)  ("Error linking pcn and cpi")
-		noi _dots `i' 1
+		noi _dots `i' 3
 		continue
 	}
-	
-	replace welfare = frval(cpi, curr)*welfare
 	
 	sum welfare, meanonly
 	local wfpcn = r(mean)
@@ -196,10 +224,32 @@ Read results
 ==================================================*/
 
 frame res {
+	
+	destring surveyid_year, gen(year)
+	gen code      = country_code
+	gen survname  = survey_acronym
+	gen datalevel = 2
+	
+	// link with CPI data
+	frlink m:1 code year datalevel survname, frame(cpi)
+	frget cpi2011 cpi2011_unadj cur_adj, from(cpi)
+	gen double curr = cpi2011 /cpi2011_unadj /cur_adj
+	
+	
 	gen wf = wfdlw/wfpcn
 	gen wt = wtdlw/wtpcn
-	save results2, replace
+	save results, replace
 }
+
+
+frame res {
+	tab note
+	count
+	count if wf == 1
+	count if wt == 1
+	
+}
+
 
 
 
