@@ -112,9 +112,10 @@ mata:
 	
 	real matrix lis_bins (`SL' l) {
 		
-		`SS' rstr, rend, line
 		string vector r
-		real scalar pos
+		real scalar pos, i 
+		real matrix f
+		string scalar rstr, rend, line
 		
 		rstr = "^1 \|"                                // condition to start search
 		rend = "^[\-]+$"               // condition to end search
