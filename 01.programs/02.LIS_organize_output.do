@@ -18,11 +18,24 @@ Output:
 
 version 16
 
+//------------ Make sure rcall is installed
+cap which rcall
+if (_rc) {
+	cap which github
+	if (_rc) {
+		net install github, from("https://haghish.github.io/github/")
+	}
+	github install haghish/rcall, stable
+}
+
+
 //------------modify this
 global update_surveynames = 1   // 1 to update survey names.
 global replace            = 0   // 1 to replace data in memory even if it has not changed
 global p_drive_output_dir = 0   // 1 to use default Vintage_control folder
 //---------------------------
+
+
 
 //------------Add personal drive cloned from github repo
 
