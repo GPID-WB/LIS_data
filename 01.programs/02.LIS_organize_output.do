@@ -15,209 +15,212 @@ Output:
 /*==================================================
 0: Program set up
 ==================================================*/
-*##s
+
 version 16
-discard
-clear all
 
 //------------modify this
-local update_surveynames = 1   // 1 to update survey names.
-local code_personal_dir  = 1   // 1 to use Code personal dir
-local data_personal_dir  = 1   // 1 to use Data personal dir
-local replace            = 0   // 1 to replace data in memory even if it has not changed
-local p_drive_output_dir = 0   // 1 to use default Vintage_control folder
+global update_surveynames = 1   // 1 to update survey names.
+global replace            = 0   // 1 to replace data in memory even if it has not changed
+global p_drive_output_dir = 0   // 1 to use default Vintage_control folder
 //---------------------------
 
 //------------Add personal drive cloned from github repo
-if (`data_personal_dir' == 1) {
-	if (lower("`c(username)'") == "wb562356") {
-		local dir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
-	}
-	if (lower("`c(username)'") == "wb463998") {
-		local dir "C:\Users\wb463998\OneDrive - WBG\GIT\LIS_data"
-	}
-	if (lower("`c(username)'") == "wb384996") {
-		local dir "c:\Users\wb384996\OneDrive - WBG\WorldBank\DECDG\PovcalNet Team\LIS_data\"
-	}
-	
+
+if (lower("`c(username)'") == "wb562356") {
+	local dir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
+}
+if (lower("`c(username)'") == "wb463998") {
+	local dir "C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data"
+}
+if (lower("`c(username)'") == "wb384996") {
+	local dir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
 }
 else { // if network drive
-	local dir "p:/01.PovcalNet/03.QA/06.LIS"
+	noi disp in r "You must provide your working directory"
+	exit
 }
 cd "`dir'"
-if (`code_personal_dir' == 1) {
-	if (lower("`c(username)'") == "wb562356") {
-		local perdir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
-	}
-	if (lower("`c(username)'") == "wb463998") {
-		local perdir "C:\Users\wb463998\OneDrive - WBG\GIT\LIS_data"
-	}
-}
-else {
-	local perdir ""
-}
-//----------------------------------------------------
 
 
-//------------ Modify this to specify different text files
-local files: dir "00.LIS_output/" files "LISSY_Dec2020*.txt"
-* local files: dir "00.LIS_output/" files "LISSY_2020-02-06_3.txt"
-* local files: dir "00.LIS_output/" files "test*.txt"
-* local files = "test2.txt"
-disp `"`files'"'
-*##e
-//-----------------------------------------------------------
-
-
-//========================================================
-// Load survey name data
-//========================================================
-
-//------------do NOT modify this
-mata: mata clear
-cap which missings
-if (_rc) ssc install missings
-
-* data with survey name
-if (`update_surveynames' == 1) {
+//------------ Update survey names
+if (${update_surveynames} == 1) {
 	* make sure file is closed
 	import excel using "02.data/_aux/LIS datasets.xlsx", sheet(LIS_survname) /*
 	*/  firstrow case(lower) allstring clear
 	missings dropvars, force
+	sort country_code surveyid_year
 	
 	save "02.data/_aux/LIS_survname.dta", replace
 }
-else { // use current version
-	use "02.data/_aux/LIS_survname.dta", clear
-}
-tostring _all, force replace
-*putmata LIS = (*), replace
-putmata LIS = (code -welfare_type), replace
+
+
+
+local path    = "`dir'/00.LIS_output"
+local pattern = "LISSY_Dec2020.*txt"  // modify this
+//----------------------------------------------------
+
+//------------ crate frames
+cap frame create txt // data from txt
+cap frame create nms // names 
+cap frame create cpi // CPI
+
 
 //========================================================
-// Start execution
+//  Get txt data to dta using function in R
 //========================================================
-if (`p_drive_output_dir' == 1) {
-     local outputdit "p:/01.PovcalNet/01.Vintage_control"
+
+drop _all
+frame txt {
+	rcall vanilla: source("`dir'/01.programs/LIStxt_2_dta.R");  /// Run functions
+	fls <- find_txt(path = "`path'", pattern = "`pattern'"); /// get text files paths
+	ls_frames <- map(fls, frames_in_txt); /// list of frames in each txt
+	all_frames <- rbindlist(ls_frames, use.names = TRUE,fill = TRUE); ///
+	st.load(all_frames)
+	destring weight welfare min max, replace force
+}
+
+//========================================================
+//  Load all necessary data
+//========================================================
+
+//------------Survey names
+frame nms {
+	use "02.data/_aux/LIS_survname.dta", clear
+	sort country_code surveyid_year
+} 
+
+
+//------------ CPIs
+frame cpi: {
+	use "\\wbgfscifs01\GPWG-GMD\Datalib\GMD-DLW\Support\Support_2005_CPI\Support_2005_CPI_v04_M\Data\Stata\Final_CPI_PPP_to_be_used.dta", clear
+	rename (code survname) (country_code  survey_acronym)
+	tostring year, gen(surveyid_year)
+	sort country_code surveyid_year  datalevel survey_acronym 
+}
+
+
+//------------create just inventory
+frame copy txt inv, replace
+frame inv {
+	contract country_code surveyid_year currency
+	drop _freq
+	sort country_code surveyid_year
+	frlink 1:1 country_code surveyid_year, frame(nms)
+	frget survey_acronym, from(nms)
+}
+
+
+//========================================================
+// Loop over new inventory
+//========================================================
+
+*##s
+frame change default
+if (${p_drive_output_dir} == 1) {
+	local outputdit "p:/01.PovcalNet/01.Vintage_control"
 }
 else {
-    local outputdit "P:\01.PovcalNet\03.QA\06.LIS\03.Vintage_control"
+	local outputdit "P:/01.PovcalNet/03.QA/06.LIS/03.Vintage_control"
 }
 
-local f = 0
-foreach file of local files {
-	local ++f
-	
-	global fn = "`dir'/00.LIS_output/`file'"
-	
-	local A: word `f' of `c(ALPHA)'
-	local l: word `f' of `c(alpha)'
-	
-	//========================================================
-	// extract vectors into Associative Array
-	//========================================================
-	
-	/* This part is not efficient. File lif_functions.mata should be executed only
-	once before looping over files. I had to include it here because there is problem
-	with the structure of the Associative Array. Basicaly, once it is defined and executed,
-	you cannot change the values. I think the problem is in the way the text files are being
-	read. Maybe they should be read outside the lis_set() function. I don't have time to
-	check and fix the the error, so I execute this file here. It is not efficient
-	but it works. */
-	
-	qui do "`perdir'01.programs/lis_functions.mata"
-	mata: `l' = lis_set()
-	mata: `A' = lis_iter(`l')
+
+frame inv {
+	local n = _N
+	qui ds
+	local invvars = "`r(varlist)'"
+}
+
+cap frame drop res 
+frame create res str20 (country_code surveyid_year survey_acronym) str25 note
+
+local i = 0
+* local n = `i'  // to delete
+noi _dots 0, title(Saving txt from LIS to PCN-QA folder) reps(`n')
+qui while (`i' <= `n') {
+	local ++i
 	
 	//========================================================
-	// convert to dta and place in corresponding folder
+	//  Prepare data
 	//========================================================
 	
-	local go = 1
-	local i = 0
-	qui while (`go' == 1) {
-		local ++i
+	foreach var of local invvars {
+		local `var' = _frval(inv, `var', `i')
+	}
+	
+	frame copy txt wrk, replace // working frame 
+	frame wrk {
+		keep if country_code == "`country_code'" & surveyid_year == "`surveyid_year'"
+		local cy_dir = "`country_code'_`surveyid_year'_`survey_acronym'"
 		
-		//------------ convert to local from AA
-		cap mata: st_local("id", `A'.get((`i',1)))
-		if (_rc != 0 | wordcount("`id'") != 3) {
-			continue, break
-		}
-		//------------Currency info
-		cap mata: st_local("currency", `A'.get((`i',3)))
-		if (_rc != 0) {
-			continue, break
-		}
-		
-		//------------ get info
-		
-		local ccode: word 1 of `id'
-		local year:  word 2 of `id'
-		local wave:  word 3 of `id'
-		
-		if (length("`wave'") == 1) {
-			local wave = "0" + "`wave'"
-		}
-		
-		mata: lis_metadata(LIS, "`ccode'", "`year'")
-		if ("`sacronym'" == "") {
-			local sacronym = "USN-LIS" // for Unknown Survey Name-LIS
-			local sname    = "Unknown Survey Name-LIS"
-		}
-		
-		//------------ create country/year folders
-		
-		noi disp _n `"`ccode' `year' `sacronym' - `sname'"' _n
-		
-		cap mkdir "`outputdit'/`ccode'"
-		local cy_dir "`ccode'_`year'_`sacronym'" // country year dir
-		cap mkdir "`outputdit'/`ccode'/`cy_dir'"
-		
-		
-		//------------get matrix into dta and save
-		drop _all
-		mata: T = `A'.get((`i',2))
-		getmata (weight welfare min max)=T
-		
-		char _dta[wave]         "`wave'"
-		char _dta[id]           "`id'"
+		char _dta[wave]         "`=wave[1]'"
+		char _dta[id]           "`cy_dir'"
 		char _dta[author]       "`c(username)'"
-		char _dta[orig_file]    "`file'"
-		char _dta[survey_name]  "`sname'"
+		char _dta[survey_name]  "`survey_acronym'"
 		char _dta[currency]     "`currency'"
 		char _dta[udpatedon]    "`c(current_date)' `c(current_time)'"
 		
-		//------------Conver euro to LCU
+		local ff = ""
+		//------------ Adjust if it is in Euros
 		if regexm("`currency'", "[Ee]uro") {
-			preserve
-			pcn load cpi, clear
-			keep if countrycode == "`ccode'" & year == `year'
-			if (_N == 1) {
-				local ccf  = cur_adj[1]
-				restore
-				foreach x in welfare min max {
-					replace `x' = (`x' / `ccf')
-				}
+			gen datalevel      = 2
+			gen survey_acronym = "`survey_acronym'"
+			
+			sort country_code surveyid_year datalevel survey_acronym 
+			cap frlink m:1 country_code surveyid_year  datalevel survey_acronym , frame(cpi)
+			
+			if (_rc) {
+				frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+				("could not link to CPI")
+				noi _dots `i' 1
+				continue
+			}
+			
+			
+			if (r(unmatched) != 0) {
+				local ff = r(unmatched)
+				gen cur_adj = 1
+			}
+			else {
+				frget cur_adj, from(cpi)
 				char _dta[currency]     "LCU"  // update with master info
 			}
-			else restore
+			
+			foreach x in welfare min max {
+				replace `x' = (`x' / cur_adj)
+			}
+			
+		} // end Euro condition 
+		
+		keep welfare weight min max
+		
+		if ("`ff'" != "") {
+			local msg = "-`ff' obs did not match with CPI data"
+		}
+		else {
+			local msg = ""
+			local ff = 0
 		}
 		
-		//------------ check if file exists or if it has changed
+		//========================================================
+		//  Save data
+		//========================================================
+		
+		//------------ Directories
+		cap mkdir "`outputdit'"
+		cap mkdir "`outputdit'/`country_code'"
+		cap mkdir "`outputdit'/`country_code'/`cy_dir'"
+		
 		cap datasignature confirm using /*
-		*/ "`outputdit'/`ccode'/`cy_dir'/`cy_dir'", strict
+		*/ "`outputdit'/`country_code'/`cy_dir'/`cy_dir'", strict
 		local rcds = _rc
 		
-		if (`rcds' == 601) { // file not found
-			nois disp in y "file `id' not found." 
-		}	
 		// find versions available
-		local vers: dir "`outputdit'/`ccode'/`cy_dir'" dirs "*", respectcase
+		local vers: dir "`outputdit'/`country_code'/`cy_dir'" dirs "*", respectcase
 		
 		if (`"`vers'"' == `""') {  // if no folder available
 			local av = "01"  // alternative version	
-			nois disp in y "Creating folder with version 01 if there is no folder available"
 		} 
+		
 		else {  // if some folders are available
 			local avs 0
 			foreach ver of local vers {
@@ -229,11 +232,16 @@ foreach file of local files {
 				local av = max(`avs') + 1
 			}
 			else {              // data has not changed
-				noi disp in y "File `id' has not changed since last time"
-				if (`replace' == 1) {
-					noi disp in y "Yet, it will be replaced since option replace == 1"
+				if (${replace} == 1) {
+					frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+					("replaced`msg'")
+					noi _dots `i' 0 + `ff'
+					
 				}
 				else {
+					frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+					("skipped`msg'")
+					noi _dots `i' -1 + `ff'
 					continue
 				}
 				local av = max(`avs')
@@ -243,25 +251,33 @@ foreach file of local files {
 			if (length("`av'") == 1) {
 				local av = "0" + "`av'"
 			}
-			nois disp in y "Creating folder with version `av' if there is no folder available"
+			
 		} // end of creating new version of files
 		
 		
-		datasignature set, reset saving("`outputdit'/`ccode'/`cy_dir'/`cy_dir'", replace)
+		datasignature set, reset saving("`outputdit'/`country_code'/`cy_dir'/`cy_dir'", replace)
 		
 		//------------Create versions folders
 		local svid "`cy_dir'_v01_M_v`av'_A_GMD"
-		cap mkdir "`outputdit'/`ccode'/`cy_dir'/`svid'"
+		cap mkdir "`outputdit'/`country_code'/`cy_dir'/`svid'"
 		
-		local ddir "`outputdit'/`ccode'/`cy_dir'/`svid'/data" // data dir
+		local ddir "`outputdit'/`country_code'/`cy_dir'/`svid'/data" // data dir
 		cap mkdir "`ddir'"
 		
 		
 		save "`ddir'/`svid'_BIN.dta", replace
-	} // end of while loop
+		
+		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+		("saved`msg'")
+		noi _dots `i' 0 + `ff'
+		
+	} // end of wrk frame 
 	
-} // close loop  `n' = .txt files
+} // end of while loop 
 
+frame change res
+
+*##e
 
 exit
 /* End of do-file */
@@ -276,11 +292,28 @@ Notes:
 
 Version Control:
 
+frame change res
+
+local country_code  = "AUT"
+local surveyid_year = "2004"
+local survey_acronym = "SILC-LIS"
 
 
-// F = lis_svid(l)
-	//G = lis_bins(l)
-	
-	
-	
-		
+frame copy txt wrk, replace
+frame change wrk
+keep if country_code == "`country_code'" & surveyid_year == "`surveyid_year'"
+
+gen datalevel      = 2
+gen survey_acronym = "`survey_acronym'"
+
+
+frlink m:1 country_code surveyid_year  datalevel survey_acronym , frame(cpi)
+
+
+local country_code  = "AUT"
+local surveyid_year = "2004"
+local survey_acronym = "SILC-LIS"
+
+count if country_code == "`country_code'" & ///
+	surveyid_year == "`surveyid_year'" & survey_acronym == "`survey_acronym'"
+
