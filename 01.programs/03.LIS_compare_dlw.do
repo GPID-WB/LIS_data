@@ -40,6 +40,7 @@ if (lower("`c(username)'") == "wb384996") {
 	global pdir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
 }
 
+cd "${pdir}"
 
 //------------ Make sure rcall is installed
 cap which rcall
@@ -49,6 +50,11 @@ if (_rc) {
 		net install github, from("https://haghish.github.io/github/")
 	}
 	github install haghish/rcall, stable
+}
+
+cap which fastgini
+if (_rc) {
+	ssc install fastgini
 }
 
 /*=================================================
@@ -127,7 +133,7 @@ frame repo {
 
 cap frame drop res 
 frame create res  str20 (country_code  surveyid_year survey_acronym) ///
-double (wfdlw wfpcn wtdlw wtpcn) str25 note
+double (wfdlw wfpcn wtdlw wtpcn gndlw gnpcn) str25 note
 
 local i = 0
 * local n = `i'  // to delete
@@ -157,7 +163,7 @@ qui while (`i' <= `n') {
 	
 	if (_rc) {
 		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-		(.) (.) (.) (.)  ("Error in PCN")
+		(.) (.) (.) (.) (.) (.) ("Error in PCN")
 		noi _dots `i' 2
 		continue
 	}
@@ -172,7 +178,7 @@ qui while (`i' <= `n') {
 	cap frlink m:1 code year datalevel survname, frame(cpi)
 	if (_rc) {
 		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-		(.) (.) (.) (.)  ("Error linking pcn and cpi")
+		(.) (.) (.) (.) (.) (.) ("Error linking pcn and cpi")
 		noi _dots `i' 3
 		continue
 	}
@@ -182,6 +188,9 @@ qui while (`i' <= `n') {
 	
 	sum weight, meanonly
 	local wtpcn  = r(mean)
+	
+	fastgini welfare [w=weight]
+	local gnpcn =  r(gini)
 	
 	
 	//========================================================
@@ -194,7 +203,7 @@ qui while (`i' <= `n') {
 		
 		if (_rc) {
 			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-			(.) (.) (.) (.)  ("Error in Datalibweb")
+			(.) (.) (.) (.) (.) (.) ("Error in Datalibweb")
 			noi _dots `i' 1
 			continue
 		}
@@ -205,6 +214,9 @@ qui while (`i' <= `n') {
 		sum weight, meanonly
 		local wtdlw = r(mean)
 		
+		fastgini welfare [w=weight]
+		local gndlw =  r(gini)
+		
 	}	
 	
 	//========================================================
@@ -212,7 +224,7 @@ qui while (`i' <= `n') {
 	//========================================================
 	
 	frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-	(`wfdlw') (`wfpcn') (`wtdlw') (`wtpcn')	("passed")
+	(`wfdlw') (`wfpcn') (`wtdlw') (`wtpcn')	 (`gndlw') (`gnpcn') ("passed")
 	noi _dots `i' 0
 	
 } // end of while 
@@ -236,9 +248,10 @@ frame res {
 	gen double curr = cpi2011 /cpi2011_unadj /cur_adj
 	
 	
-	gen wf = wfdlw/wfpcn
-	gen wt = wtdlw/wtpcn
-	save results, replace
+	gen wf = round(wfdlw/wfpcn, .001)
+	gen wt = round(wtdlw/wtpcn, .001)
+	gen gn = round(gndlw/gnpcn, .001)
+	save "02.data/comparison_results.dta", replace
 }
 
 
@@ -247,10 +260,12 @@ frame res {
 	count
 	count if wf == 1
 	count if wt == 1
+	count if gn == 1
 	
 }
 
-
+use "02.data/comparison_results.dta", clear
+keep if wt != 1
 
 
 *##e
@@ -269,4 +284,32 @@ Notes:
 
 Version Control:
 
+frame change res
+local c = "CAN"
+local y = "1981"
+local a = "SILC-LIS"
+
+frame change default
+pcn load, countr(`c') year(`y') ///
+	maindir("${maindir}") clear
+	
+
+
+frame copy txt wrk, replace
+frame change wrk
+keep if country_code == "`country_code'" & surveyid_year == "`surveyid_year'"
+
+gen datalevel      = 2
+gen survey_acronym = "`survey_acronym'"
+
+
+frlink m:1 country_code surveyid_year  datalevel survey_acronym , frame(cpi)
+
+
+local country_code  = "AUT"
+local surveyid_year = "2004"
+local survey_acronym = "SILC-LIS"
+
+count if country_code == "`country_code'" & ///
+	surveyid_year == "`surveyid_year'" & survey_acronym == "`survey_acronym'"
 
