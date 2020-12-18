@@ -16,7 +16,12 @@
 #   Load libraries
 #----------------------------------------------------------
 
-library("data.table")
+pkgs    <- c("data.table", "fs")
+
+not_in  <-  !(pkgs %in% names(installed.packages()[,1]))
+to_inst <- lapply(pkgs[not_in], install.packages)
+to_load <- lapply(pkgs, library, character.only = TRUE)
+
 
 #----------------------------------------------------------
 #   Set up

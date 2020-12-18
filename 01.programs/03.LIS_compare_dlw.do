@@ -113,7 +113,7 @@ frame repo {
 
 
 frame cpi: {
-	use "\\wbgfscifs01\GPWG-GMD\Datalib\GMD-DLW\Support\Support_2005_CPI\Support_2005_CPI_v04_M\Data\Stata\Final_CPI_PPP_to_be_used.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Final_CPI_PPP_to_be_used.dta", clear
 	sort code year datalevel survname
 }
 
@@ -147,12 +147,18 @@ qui while (`i' <= `n') {
 	local wtdlw = .
 	local wtpcn = .
 	
-	// read dlw repo one by one. 
-	frame repo {
-		foreach var of local dlwvars {
-			local `var' = `var'[`i']
-		}
+	// read dlw repo one by one.
+	foreach var of local dlwvars {
+		local `var' ""
+		local `var' = _frval(repo, `var', `i')
 	}
+	
+	// option 2
+	* frame repo {
+		* foreach var of local dlwvars {
+			* local `var' = `var'[`i']
+		* }
+	* }
 	
 	//========================================================
 	//  load PCN data and get mean of welfare and weight
@@ -169,19 +175,6 @@ qui while (`i' <= `n') {
 	}
 	
 	keep welfare weight
-	gen code      = "`country_code'"
-	gen year      = `surveyid_year'
-	gen survname  = "`survey_acronym'"
-	gen datalevel = 2
-	
-	// link with CPI data
-	cap frlink m:1 code year datalevel survname, frame(cpi)
-	if (_rc) {
-		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-		(.) (.) (.) (.) (.) (.) ("Error linking pcn and cpi")
-		noi _dots `i' 3
-		continue
-	}
 	
 	sum welfare, meanonly
 	local wfpcn = r(mean)
@@ -265,7 +258,7 @@ frame res {
 }
 
 use "02.data/comparison_results.dta", clear
-keep if wt != 1
+keep if gn != 1
 
 
 *##e

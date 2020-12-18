@@ -16,9 +16,12 @@
 #   Load libraries
 #----------------------------------------------------------
 
-library(stringr)
-library(purrr)
-library(data.table)
+pkgs    <- c("stringr", "purrr", "data.table", "fs")
+
+not_in  <-  !(pkgs %in% names(installed.packages()[,1]))
+to_inst <- lapply(pkgs[not_in], install.packages)
+to_load <- lapply(pkgs, library, character.only = TRUE)
+
 
 #----------------------------------------------------------
 #   subfunctions
