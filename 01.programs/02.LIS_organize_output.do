@@ -90,6 +90,10 @@ frame txt {
 	all_frames <- rbindlist(ls_frames, use.names = TRUE,fill = TRUE); ///
 	st.load(all_frames)
 	destring weight welfare min max, replace force
+	
+	//------------ Change for WB ISO3 codes
+	replace country_code = "SRB" if country_code == "RSB"
+
 	save "02.data/LIStxt_2_dta_temp.dta", replace
 }
 
