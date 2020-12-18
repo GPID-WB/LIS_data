@@ -26,6 +26,7 @@ global vintage "P:\01.PovcalNet\03.QA\06.LIS\03.Vintage_control"
  drop if country_code=="AUS" & year==1989 & survey_acronym=="SIH-LIS"
  drop if country_code=="ISR" & inrange(year,1979,1992) & survey_acronym=="IHDS-LIS"
  drop if country_code=="USA" & inrange(year,2002,2003) & survey_acronym=="CPS-LIS"
+ drop if country_code=="DEU" & inrange(year,2004,2006) // -> (!!!) NO ESTAN CARGANDO BIEN EN PCN
  drop if year==.
  
 * Local with survey list
@@ -65,9 +66,7 @@ foreach s of local surveys2 {
 	        
 	order code year bins lcu_pc min_lcu_pc max_lcu_pc popw share
 	
-	********************
-	*      Append      *
-    ********************
+	* APPEND:
 	append using `LIS'
     save `LIS', replace 
 
@@ -77,8 +76,7 @@ foreach s of local surveys2 {
                     III -  Close tempfile and save
 ==============================================================================*/	
 use `LIS', clear
-keep code year bins lcu_pc lcu_pc min_lcu_pc max_lcu_pc popw share
-sort year bins
+sort code year bins
 
 * Save appended bins data
 save "${output}\LIS_bins_Dec_18_2020.dta", replace
