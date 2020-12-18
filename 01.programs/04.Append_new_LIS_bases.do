@@ -19,8 +19,7 @@ global vintage "P:\01.PovcalNet\03.QA\06.LIS\03.Vintage_control"
 * Call dta of new bases + those that changed
  use "${input}/comparison_results.dta", clear
  
-* Keep survyes that Minh needs: those that have changed 
-				               /*(diff Gini from last version + new ones)*/  
+* Keep survyes that Minh needs: new ones + those that have changed (diff Gini from last version)  
  keep if gn !=1  
  
 * Clean survey versions (duplicate years with wrong/outdated acronym) 
@@ -51,7 +50,6 @@ foreach s of local surveys2 {
 	cap pcn load,  countries(`c') year(`y') maindir(${vintage}) clear
     if _rc!=0  continue	
 	
-			
 	ren welfare lcu_pc
 	ren min min_lcu_pc
 	ren max max_lcu_pc
