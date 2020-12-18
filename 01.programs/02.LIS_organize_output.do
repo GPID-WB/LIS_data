@@ -106,7 +106,7 @@ frame nms {
 
 //------------ CPIs
 frame cpi: {
-	use "\\wbgfscifs01\GPWG-GMD\Datalib\GMD-DLW\Support\Support_2005_CPI\Support_2005_CPI_v04_M\Data\Stata\Final_CPI_PPP_to_be_used.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Final_CPI_PPP_to_be_used.dta", clear
 	rename (code survname) (country_code  survey_acronym)
 	tostring year, gen(surveyid_year)
 	sort country_code surveyid_year  datalevel survey_acronym 
@@ -145,7 +145,8 @@ frame inv {
 }
 
 cap frame drop res 
-frame create res str20 (country_code surveyid_year survey_acronym) str25 note
+frame create res str20 (country_code surveyid_year survey_acronym) ///
+	str60 note
 
 local i = 0
 * local n = `i'  // to delete
