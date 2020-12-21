@@ -21,12 +21,6 @@ global vintage "P:\01.PovcalNet\03.QA\06.LIS\03.Vintage_control"
  
 * Keep survyes that Minh needs: new ones + those that have changed (diff Gini from last version)  
  keep if gn !=1  
- 
-* Clean survey versions (duplicate years with wrong/outdated acronym) 
- drop if country_code=="AUS" & year==1989 & survey_acronym=="SIH-LIS"
- drop if country_code=="ISR" & inrange(year,1979,1992) & survey_acronym=="IHDS-LIS"
- drop if country_code=="USA" & inrange(year,2002,2003) & survey_acronym=="CPS-LIS"
- drop if country_code=="DEU" & inrange(year,2004,2006) // -> (!!!) NO ESTAN CARGANDO BIEN EN PCN
  drop if year==.
  
 * Local with survey list
