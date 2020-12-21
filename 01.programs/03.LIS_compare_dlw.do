@@ -33,10 +33,10 @@ global maindir "//wbntpcifs/povcalnet/01.PovcalNet/03.QA/06.LIS/03.Vintage_contr
 if (lower("`c(username)'") == "wb562356") {
 	global pdir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
 }
-if (lower("`c(username)'") == "wb463998") {
+else if (lower("`c(username)'") == "wb463998") {
 	global pdir "C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data"
 }
-if (lower("`c(username)'") == "wb384996") {
+else if (lower("`c(username)'") == "wb384996") {
 	global pdir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
 }
 
