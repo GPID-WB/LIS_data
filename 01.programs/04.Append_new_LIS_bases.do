@@ -73,6 +73,6 @@ use `LIS', clear
 sort code year bins
 
 * Save appended bins data
-save "${output}\LIS_bins_Dec_18_2020.dta", replace
+save "${output}\LIS_bins_Dec_21_2020.dta", replace
 
 * End of File
