@@ -42,10 +42,10 @@ global p_drive_output_dir = 0   // 1 to use default Vintage_control folder
 if (lower("`c(username)'") == "wb562356") {
 	local dir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
 }
-if (lower("`c(username)'") == "wb463998") {
+else if (lower("`c(username)'") == "wb463998") {
 	local dir "C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data"
 }
-if (lower("`c(username)'") == "wb384996") {
+else if (lower("`c(username)'") == "wb384996") {
 	local dir "c:/Users/wb384996/OneDrive - WBG/WorldBank/DECDG/PovcalNet Team/LIS_data"
 }
 else { // if network drive
@@ -69,6 +69,7 @@ if (${update_surveynames} == 1) {
 
 
 local path    = "`dir'/00.LIS_output"
+* local pattern = "LISSY_Dec2020_3\\.txt"  // modify this
 local pattern = "LISSY_Dec2020.*txt"  // modify this
 //----------------------------------------------------
 
@@ -91,9 +92,15 @@ frame txt {
 	st.load(all_frames)
 	destring weight welfare min max, replace force
 	
+	drop if country_code == ""
+	
 	//------------ Change for WB ISO3 codes
 	replace country_code = "SRB" if country_code == "RSB"
-
+	
+	
+	//------------check specific cases
+	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
+	
 	save "02.data/LIStxt_2_dta_temp.dta", replace
 }
 
@@ -125,6 +132,7 @@ frame inv {
 	sort country_code surveyid_year
 	frlink 1:1 country_code surveyid_year, frame(nms)
 	frget survey_acronym, from(nms)
+	drop if country_code == ""
 }
 
 
@@ -148,9 +156,10 @@ frame inv {
 	local invvars = "`r(varlist)'"
 }
 
+
 cap frame drop res 
 frame create res str20 (country_code surveyid_year survey_acronym) ///
-	str60 note
+str60 note
 
 local i = 0
 * local n = `i'  // to delete
@@ -169,9 +178,9 @@ qui while (`i' <= `n') {
 	
 	if ("`survey_acronym'" == "") {
 		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-				("No Survey name available")
-				noi _dots `i' 1
-				continue
+		("No Survey name available")
+		noi _dots `i' 1
+		continue
 	}
 	
 	
@@ -249,29 +258,26 @@ qui while (`i' <= `n') {
 			local av = "01"  // alternative version	
 		} 
 		
-		else {  // if some folders are available
+		else {  // if at least one folder is available
 			local avs 0
+			
 			foreach ver of local vers {
-				if regexm("`ver'", "_v([0-9]+)_A_GMD$") local v = regexs(1)
+				if regexm("`ver'", "_[Vv]([0-9]+)_A_GMD$") local v = regexs(1)
 				local avs = "`avs', `v'"
 			}
 			
 			if inlist(`rcds',9,601) {  // data has changed
-				local av = max(`avs') + 1
+				if (${replace} != 1) local av = max(`avs') + 1 // Add new version
+				else                 local av = max(`avs')     // replace current version
 			}
 			else {              // data has not changed
-				if (${replace} == 1) {
-					frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-					("replaced`msg'")
-					noi _dots `i' 0 + `ff'
-					
-				}
-				else {
+			
+				if (${replace} != 1) {
 					frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
 					("skipped`msg'")
 					noi _dots `i' -1 + `ff'
 					continue
-				}
+				}	
 				local av = max(`avs')
 			} // end of data has not changed
 			
@@ -291,13 +297,19 @@ qui while (`i' <= `n') {
 		
 		local ddir "`outputdit'/`country_code'/`cy_dir'/`svid'/data" // data dir
 		cap mkdir "`ddir'"
-		
-		
+			
+		if (inlist(`rcds',9,601)  & ${replace} == 1 ) {  // data has changed
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			("replaced`msg'")
+		}
+		else {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			("saved`msg'")
+		}
+	
 		save "`ddir'/`svid'_BIN.dta", replace
 		
-		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-		("saved`msg'")
-		noi _dots `i' 0 + `ff'
+		noi _dots `i' 0 + `ff'	
 		
 	} // end of wrk frame 
 	
@@ -344,5 +356,5 @@ local surveyid_year = "2004"
 local survey_acronym = "SILC-LIS"
 
 count if country_code == "`country_code'" & ///
-	surveyid_year == "`surveyid_year'" & survey_acronym == "`survey_acronym'"
+surveyid_year == "`surveyid_year'" & survey_acronym == "`survey_acronym'"
 
