@@ -137,8 +137,6 @@ frame cpi: {
 	use "`cpifile'", clear
 	
 	
-	
-	
 	rename (code survname) (country_code  survey_acronym)
 	tostring year, gen(surveyid_year)
 	sort country_code surveyid_year  datalevel survey_acronym 
