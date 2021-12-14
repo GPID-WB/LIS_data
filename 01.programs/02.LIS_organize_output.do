@@ -117,7 +117,28 @@ frame nms {
 
 //------------ CPIs
 frame cpi: {
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Final_CPI_PPP_to_be_used.dta", clear
+	* use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Final_CPI_PPP_to_be_used.dta", clear
+	
+	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
+	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
+	local cpivers ""
+	foreach cpifolder of local cpifolders {
+		if regexm("`cpifolder'", "([0-9]+)(_M$)") local ver = regexs(1)
+		local cpivers "`cpivers'`ver' "
+	}
+	local cpivers = trim("`cpivers'")
+	local cpivers:  subinstr local cpivers " " ", ", all
+	local maxver = max(`cpivers')
+	
+	if length("`maxver'") == 1 {
+		local maxver "0`maxver'"
+	}
+	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
+	use "`cpifile'", clear
+	
+	
+	
+	
 	rename (code survname) (country_code  survey_acronym)
 	tostring year, gen(surveyid_year)
 	sort country_code surveyid_year  datalevel survey_acronym 
