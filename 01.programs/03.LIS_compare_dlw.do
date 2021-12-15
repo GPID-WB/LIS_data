@@ -211,12 +211,28 @@ qui while (`i' <= `n') {
 		qui cap datalibweb, country(`country_code') year(`surveyid_year') type(GMD)  ///
 		survey(`survey_acronym') module(BIN)
 		
-		if (_rc) {
+		if (_rc == 678) {
 			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-			(.) (.) (.) (.) (.) (.) ("Error in Datalibweb")
+			(.) (.) (.) (.) (.) (.) ("Err:DLW>Access denied")
 			noi _dots `i' 1
 			continue
 		}
+		
+		else if (_rc == 676) {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			(.) (.) (.) (.) (.) (.) ("Err:DLW>Not found")
+			noi _dots `i' 1
+			continue
+		}
+		
+		else if (_rc) {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			(.) (.) (.) (.) (.) (.) ("Err:DLW")
+			noi _dots `i' 1
+			continue
+		}
+		
+		
 		
 		cap {
 			sum welfare, meanonly
@@ -303,7 +319,7 @@ Notes:
 
 Version Control:
 
-frame change res
+* frame change res
 local c = "CAN"
 local y = "1981"
 local a = "SILC-LIS"
@@ -331,4 +347,15 @@ local survey_acronym = "SILC-LIS"
 
 count if country_code == "`country_code'" & ///
 	surveyid_year == "`surveyid_year'" & survey_acronym == "`survey_acronym'"
+
+
+
+frame res {
+	list  country_code  surveyid_year if ///
+		(wf != 1 | wt != 1 | gn != 1) & !missing(wf, wt, gn)
+}
+
+
+
+
 
