@@ -17,6 +17,7 @@ Output:
 ==================================================*/
 version 16.1
 drop _all
+frame change default
 
 //------------create frames
 cap frame create dlw
@@ -113,7 +114,23 @@ frame repo {
 
 
 frame cpi: {
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Final_CPI_PPP_to_be_used.dta", clear
+	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
+	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
+	local cpivers ""
+	foreach cpifolder of local cpifolders {
+		if regexm("`cpifolder'", "([0-9]+)(_M$)") local ver = regexs(1)
+		local cpivers "`cpivers'`ver' "
+	}
+	local cpivers = trim("`cpivers'")
+	local cpivers:  subinstr local cpivers " " ", ", all
+	local maxver = max(`cpivers')
+	
+	if length("`maxver'") == 1 {
+		local maxver "0`maxver'"
+	}
+	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
+	use "`cpifile'", clear
+
 	sort code year datalevel survname
 }
 
@@ -201,14 +218,23 @@ qui while (`i' <= `n') {
 			continue
 		}
 		
-		sum welfare, meanonly
-		local wfdlw  = r(mean)
+		cap {
+			sum welfare, meanonly
+			local wfdlw  = r(mean)
+			
+			sum weight, meanonly
+			local wtdlw = r(mean)
+			
+			fastgini welfare [w=weight]
+			local gndlw =  r(gini)
+		}
 		
-		sum weight, meanonly
-		local wtdlw = r(mean)
-		
-		fastgini welfare [w=weight]
-		local gndlw =  r(gini)
+		if (_rc) {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			(.) (.) (.) (.) (.) (.) ("Error in calculations")
+			noi _dots `i' 1
+			continue
+		}
 		
 	}	
 	
