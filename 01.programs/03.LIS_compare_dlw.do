@@ -29,7 +29,6 @@ cap frame create ctr
 //------------main directory with LIS data
 global maindir "//wbntpcifs/povcalnet/01.PovcalNet/03.QA/06.LIS/03.Vintage_control/"
 
-
 //------------Personal directory
 if (lower("`c(username)'") == "wb562356") {
 	global pdir "c:/Users/wb562356/OneDrive - WBG/Documents/MPI for LIS countries"
