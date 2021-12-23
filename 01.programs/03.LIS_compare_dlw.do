@@ -17,6 +17,7 @@ Output:
 ==================================================*/
 version 16.1
 drop _all
+frame change default
 
 //------------create frames
 cap frame create dlw
@@ -27,7 +28,6 @@ cap frame create ctr
 
 //------------main directory with LIS data
 global maindir "//wbntpcifs/povcalnet/01.PovcalNet/03.QA/06.LIS/03.Vintage_control/"
-
 
 //------------Personal directory
 if (lower("`c(username)'") == "wb562356") {
@@ -113,7 +113,23 @@ frame repo {
 
 
 frame cpi: {
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Final_CPI_PPP_to_be_used.dta", clear
+	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
+	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
+	local cpivers ""
+	foreach cpifolder of local cpifolders {
+		if regexm("`cpifolder'", "([0-9]+)(_M$)") local ver = regexs(1)
+		local cpivers "`cpivers'`ver' "
+	}
+	local cpivers = trim("`cpivers'")
+	local cpivers:  subinstr local cpivers " " ", ", all
+	local maxver = max(`cpivers')
+	
+	if length("`maxver'") == 1 {
+		local maxver "0`maxver'"
+	}
+	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
+	use "`cpifile'", clear
+
 	sort code year datalevel survname
 }
 
@@ -194,21 +210,46 @@ qui while (`i' <= `n') {
 		qui cap datalibweb, country(`country_code') year(`surveyid_year') type(GMD)  ///
 		survey(`survey_acronym') module(BIN)
 		
-		if (_rc) {
+		if (_rc == 678) {
 			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-			(.) (.) (.) (.) (.) (.) ("Error in Datalibweb")
+			(.) (.) (.) (.) (.) (.) ("Err:DLW>Access denied")
 			noi _dots `i' 1
 			continue
 		}
 		
-		sum welfare, meanonly
-		local wfdlw  = r(mean)
+		else if (_rc == 676) {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			(.) (.) (.) (.) (.) (.) ("Err:DLW>Not found")
+			noi _dots `i' 1
+			continue
+		}
 		
-		sum weight, meanonly
-		local wtdlw = r(mean)
+		else if (_rc) {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			(.) (.) (.) (.) (.) (.) ("Err:DLW")
+			noi _dots `i' 1
+			continue
+		}
 		
-		fastgini welfare [w=weight]
-		local gndlw =  r(gini)
+		
+		
+		cap {
+			sum welfare, meanonly
+			local wfdlw  = r(mean)
+			
+			sum weight, meanonly
+			local wtdlw = r(mean)
+			
+			fastgini welfare [w=weight]
+			local gndlw =  r(gini)
+		}
+		
+		if (_rc) {
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			(.) (.) (.) (.) (.) (.) ("Error in calculations")
+			noi _dots `i' 1
+			continue
+		}
 		
 	}	
 	
@@ -277,7 +318,7 @@ Notes:
 
 Version Control:
 
-frame change res
+* frame change res
 local c = "CAN"
 local y = "1981"
 local a = "SILC-LIS"
@@ -305,4 +346,15 @@ local survey_acronym = "SILC-LIS"
 
 count if country_code == "`country_code'" & ///
 	surveyid_year == "`surveyid_year'" & survey_acronym == "`survey_acronym'"
+
+
+
+frame res {
+	list  country_code  surveyid_year if ///
+		(wf != 1 | wt != 1 | gn != 1) & !missing(wf, wt, gn)
+}
+
+
+
+
 
