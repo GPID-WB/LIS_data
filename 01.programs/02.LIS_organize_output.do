@@ -139,7 +139,7 @@ frame cpi: {
 	*/ //(MV - Oct 2022)
 	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
 	
-	rename (code survname) (country_code  survey_acronym)
+	rename (code survname cpi_data_level) (country_code  survey_acronym datalevel)
 	tostring year, gen(surveyid_year)
 	sort country_code surveyid_year  datalevel survey_acronym 
 	

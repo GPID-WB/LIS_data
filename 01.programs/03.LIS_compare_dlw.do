@@ -113,7 +113,7 @@ frame repo {
 
 
 frame cpi: {
-	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
+/*	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
 	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
 	local cpivers ""
 	foreach cpifolder of local cpifolders {
@@ -129,7 +129,9 @@ frame cpi: {
 	}
 	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
 	use "`cpifile'", clear
-
+	*/ //MV
+	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
+	ren cpi_data_level datalevel
 	sort code year datalevel survname
 }
 
