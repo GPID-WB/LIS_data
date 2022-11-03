@@ -137,7 +137,7 @@ frame cpi: {
 	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
 	use "`cpifile'", clear
 	*/ //(MV - Oct 2022)
-	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/blob/main/cpi.csv", clear 
+	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
 	
 	rename (code survname) (country_code  survey_acronym)
 	tostring year, gen(surveyid_year)
@@ -148,7 +148,7 @@ frame cpi: {
 	replace survey_acronym = "SIHCA-LIS"   if country_code=="AUS" & surveyid_year==1989
 	replace survey_acronym = "SIH-HES-LIS" if country_code=="AUS" & surveyid_year==2016
 	replace survey_acronym = "SLID-LIS"    if country_code=="CAN" & surveyid_year==1997
-	replace survey_acronym = "FRS-LIS"     if country_code=="GBR" & inrange(surveyid_year,1996,1998)
+	replace survey_acronym = "FRS-LIS"     if country_code=="GBR" & inrange(surveyid_year,1995,1998)
 	replace survey_acronym = "TIS-LIS"     if country_code=="FRA" & surveyid_year==1984
 	replace survey_acronym = "TSIS-LIS"    if country_code=="FRA" & surveyid_year==2000
 	

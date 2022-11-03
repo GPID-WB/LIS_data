@@ -17,8 +17,8 @@ Output:
 ==================================================*/
  
 //------------To modify
-*local silc   "at be cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk" // 26 EUSILC countries
-*local nosilc "au br ca cl cn co do eg ge gt in il ci jp mx ps pa py pe ru za kr tw us uy vn" // 26 rest
+*local silc   "at be cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk"    // 26 EUSILC countries
+*local nosilc "au br ca cl cn co do eg ge gt in il ci jp ml mx ps pa py pe ru za kr tw us uy vn" // 27 rest
 
 local silc   "at"
 local nosilc "au br"
@@ -32,7 +32,7 @@ local surveys "`surveys'h"
 //------------Do NOT modify
 
 local countries "`silc' `nosilc'"
-numlist "1967/2020"
+numlist "1969/2020"
 local years = "`r(numlist)'"
 foreach year of loca years {
 	local y = substr("`year'", 3,.)
