@@ -71,7 +71,7 @@ if (${update_surveynames} == 1) {
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
 * local pattern = "LISSY_Dec2020_3\\.txt" 
-local pattern = "LISSY_Oct2022.*txt"  // modify this
+local pattern = "LISSY_Dec2022.*txt"  // modify this
 //----------------------------------------------------
 
 //------------ crate frames
