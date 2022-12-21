@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    11 Dec 2019 - 20:55:47
-Modification Date: 10/26/2022 (MV)
+Modification Date: 12/19/2022 (MV)
 Do-file version:    01
 References:
 Output:
@@ -70,7 +70,6 @@ if (${update_surveynames} == 1) {
 
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
-* local pattern = "LISSY_Dec2020_3\\.txt" 
 local pattern = "LISSY_Dec2022.*txt"  // modify this
 //----------------------------------------------------
 
@@ -118,7 +117,7 @@ frame nms {
 
 //------------ CPIs
 frame cpi: {
-	* use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Final_CPI_PPP_to_be_used.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Support_2005_CPI_v08_M_v01_A_GMD_CPI_SM23.dta", clear
 	/*
 	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
 	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
@@ -136,24 +135,15 @@ frame cpi: {
 	}
 	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
 	use "`cpifile'", clear
-	*/ //(MV - Oct 2022)
+	*/ 
+	/*(MV - Oct 2022)
 	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
-	
+	*/
 	rename (code survname cpi_data_level) (country_code  survey_acronym datalevel)
 	tostring year, gen(surveyid_year)
 	sort country_code surveyid_year  datalevel survey_acronym 
 	
-	* Rename survey_acronym if changed (7 cases):
-	replace survey_acronym = "IHS-LIS"     if country_code=="AUS" & surveyid_year==1981
-	replace survey_acronym = "SIHCA-LIS"   if country_code=="AUS" & surveyid_year==1989
-	replace survey_acronym = "SIH-HES-LIS" if country_code=="AUS" & surveyid_year==2016
-	replace survey_acronym = "SLID-LIS"    if country_code=="CAN" & surveyid_year==1997
-	replace survey_acronym = "FRS-LIS"     if country_code=="GBR" & inrange(surveyid_year,1995,1998)
-	replace survey_acronym = "TIS-LIS"     if country_code=="FRA" & surveyid_year==1984
-	replace survey_acronym = "TSIS-LIS"    if country_code=="FRA" & surveyid_year==2000
-	
 }
-
 
 //------------create just inventory
 frame copy txt inv, replace
