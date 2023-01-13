@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    11 Dec 2019 - 20:53:13
-Modification Date:   
+Modification Date: Oct 19 2022  
 Do-file version:    01
 References:          
 Output:             
@@ -17,11 +17,11 @@ Output:
 ==================================================*/
  
 //------------To modify
-*local silc   "at be cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk" // 26 EUSILC countries
-*local nosilc "au br ca cl cn co do eg ge gt in il ci jp mx ps pa py pe ru za kr tw us uy vn" // 26 rest
+*local silc   "at be cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk"    // 26 EUSILC countries
+*local nosilc "au br ca cl cn co do eg ge gt in il ci jp ml mx ps pa py pe ru za kr tw us uy vn" // 27 rest
 
 local silc   "at"
-local nosilc "au"
+local nosilc "au br"
 /* 
 local surveys "us13 us16 de15 de16 il16 il14"
 local y = substr("`surveys'", 3,.)
@@ -32,7 +32,7 @@ local surveys "`surveys'h"
 //------------Do NOT modify
 
 local countries "`silc' `nosilc'"
-numlist "1967/2019"
+numlist "1967/2020"
 local years = "`r(numlist)'"
 foreach year of loca years {
 	local y = substr("`year'", 3,.)

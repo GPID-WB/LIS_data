@@ -1,7 +1,7 @@
 /*===========================================================================
 Project:     Append new LIS dbs + those that have changed to be shared with Minh
-Creation:    Jan 2020
-Modified:	 Dec 18 2020
+Created:     Jan 2020
+Modified:	 Jan 11 2023
 Author:      Martha Viveros
 Institution: World Bank Group - Povcalnet Team
 ============================================================================*/
@@ -37,8 +37,14 @@ use "${input}/comparison_results.dta", clear
 keep if gn !=1  
 drop if year==.
 
+* Remove old surveys that LIS replaced with new ones (repeated yrs)
+ drop if country_code=="CAN" & year==1997 & survey_acronym != "SLID-LIS"  
+ drop if country_code=="FRA" & year==1984 & survey_acronym != "TIS-LIS"  
+ drop if country_code=="FRA" & year==2000 & survey_acronym != "TSIS-LIS"  
+ drop if country_code=="GBR" & year==1995 & survey_acronym != "FRS-LIS"
+ 
 * Local with survey list
-egen concat = concat(country_code surveyid_year)
+egen concat = concat(country_code surveyid_year survey_acronym)
 levelsof concat, local(surveys)
 local surveys "`surveys'" 
 drop _all
@@ -55,11 +61,12 @@ frame create appres  str20 (country_code  surveyid_year) str25 note
 foreach s of local surveys {
 	
 	local c = substr("`s'",1,3)   // country ISO
-	local y = substr("`s'",4,.)   // year
-	display in y " *** `c' - `y' ***"
+	local y = substr("`s'",4,4)   // year
+	local a = substr("`s'",8,.)   // survey acronym
+	display in y " *** `c' - `y' - `a' ***"
 	
 	* Load most recent LIS surveys
-	cap pcn load,  countries(`c') year(`y') maindir(${vintage}) clear
+	cap pcn load,  countries(`c') year(`y') survey(`a') maindir(${vintage}) clear
 	if (_rc) {
 		frame post appres ("`c'") ("`y'") ///
 		("Error in PCN")
@@ -105,7 +112,6 @@ use `LIS', clear
 sort code year bins
 
 * Save appended bins data
-
 local loc_srf = clock("`c(current_date)'`c(current_time)'", "DMYhms")
 local loc_hrf: disp %tcCCYY_Mon_DD `loc_srf'
 local loc_hrf: subinstr local  loc_hrf " " "_", all
