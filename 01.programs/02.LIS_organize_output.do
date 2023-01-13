@@ -102,7 +102,9 @@ frame txt {
 	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
 	
 	save "02.data/LIStxt_2_dta_temp.dta", replace
+
 }
+
 
 //========================================================
 //  Load all necessary data
@@ -117,7 +119,7 @@ frame nms {
 
 //------------ CPIs
 frame cpi: {
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v04_M/Data/Stata/Support_2005_CPI_v08_M_v01_A_GMD_CPI_SM23.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v08_M/Data/Stata/Support_2005_CPI_v08_M_v01_A_GMD_CPI_SM23.dta", clear
 	/*
 	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
 	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
@@ -141,6 +143,7 @@ frame cpi: {
 	*/
 	rename (code survname cpi_data_level) (country_code  survey_acronym datalevel)
 	tostring year, gen(surveyid_year)
+	destring datalevel, replace
 	sort country_code surveyid_year  datalevel survey_acronym 
 	
 }

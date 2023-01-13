@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    15 Dec 2020 - 12:09:13
-Modification Date:   
+Modification Date:  1/10/2023 (MV) 
 Do-file version:    01
 References:          
 Output:             
@@ -99,12 +99,14 @@ frame repo {
 frame repo {	
 	destring surveyid_year, gen(year)
 	
-	local the7 = "AUS|CAN|ISR|JPN|KOR|TWN|USA"
+	*local the7     = "AUS|CAN|ISR|JPN|KOR|TWN|USA"
+	local the8      = "AUS|CAN|ISR|JPN|KOR|TWN|USA|DEU"
+	local preeusilc = "AUT|BEL|CZE|DNK|FIN|FRA|GRC|HUN|ISL|IRL|ITA|LUX|NLD|NOR|POL|ROU|SVK|SVN|ESP|SWE|CHE|GBR"
 	gen to_keep = .
-	replace to_keep = 1 if regexm(country_code, "`the7'")
-	replace to_keep = 1 if regexm(survey_acronym, "SILC") & year <= 2002
-	replace to_keep = 1 if country_code == "DEU" & year >= 1991
-	replace to_keep = 1 if country_code == "GBR" & year <= 2003
+	replace to_keep = 1 if regexm(country_code, "`the8'")
+	replace to_keep = 1 if regexm(country_code, "`preeusilc'") & year <= 2002
+	replace to_keep = . if country_code == "DEU" & year < 1991
+	replace to_keep = 1 if country_code == "GBR" & year == 2003
 	keep if to_keep == 1
 }
 
@@ -113,6 +115,7 @@ frame repo {
 
 
 frame cpi: {
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v08_M/Data/Stata/Support_2005_CPI_v08_M_v01_A_GMD_CPI_SM23.dta", clear
 /*	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
 	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
 	local cpivers ""
@@ -129,9 +132,12 @@ frame cpi: {
 	}
 	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
 	use "`cpifile'", clear
+	
 	*/ //MV
-	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
+	*import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
+	
 	ren cpi_data_level datalevel
+	destring datalevel, replace
 	sort code year datalevel survname
 }
 
@@ -280,8 +286,8 @@ frame res {
 	
 	// link with CPI data
 	frlink m:1 code year datalevel survname, frame(cpi)
-	frget cpi2011 cpi2011_unadj cur_adj, from(cpi)
-	gen double curr = cpi2011 /cpi2011_unadj /cur_adj
+	frget cpi2017 cpi2017_unadj cur_adj, from(cpi)
+	gen double curr = cpi2017 /cpi2017_unadj /cur_adj
 	
 	
 	gen wf = round(wfdlw/wfpcn, .001)
