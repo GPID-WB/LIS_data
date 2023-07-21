@@ -1,7 +1,7 @@
 /*===========================================================================
 Project:     Append new LIS dbs + those that have changed to be shared with Minh
 Created:     Jan 2020
-Modified:	 Jan 11 2023
+Modified:	 Jul 19 2023
 Author:      Martha Viveros
 Institution: World Bank Group - Povcalnet Team
 ============================================================================*/
@@ -37,11 +37,16 @@ use "${input}/comparison_results.dta", clear
 keep if gn !=1  
 drop if year==.
 
-* Remove old surveys that LIS replaced with new ones (repeated yrs)
- drop if country_code=="CAN" & year==1997 & survey_acronym != "SLID-LIS"  
- drop if country_code=="FRA" & year==1984 & survey_acronym != "TIS-LIS"  
+* Remove old/duplicate survey/years (removed or replaced by LIS)
+ drop if country_code=="AUT" & year==1987
+ drop if country_code=="CAN" & year==1997 & survey_acronym != "SLID-LIS" 
+ drop if country_code=="GBR" & year==1995 & survey_acronym != "FRS-LIS"  
+ drop if country_code=="FRA" & year==1978 & survey_acronym != "TIS-LIS" 
+ drop if country_code=="FRA" & year==1984 & survey_acronym != "TIS-LIS"
+ drop if country_code=="FRA" & year==1989 
+ drop if country_code=="FRA" & year==1994 
  drop if country_code=="FRA" & year==2000 & survey_acronym != "TSIS-LIS"  
- drop if country_code=="GBR" & year==1995 & survey_acronym != "FRS-LIS"
+ 
  
 * Local with survey list
 egen concat = concat(country_code surveyid_year survey_acronym)
