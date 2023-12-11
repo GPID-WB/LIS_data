@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    11 Dec 2019 - 20:55:47
-Modification Date: 12/19/2022 (MV)
+Modification Date: 7/17/2023 (MV)
 Do-file version:    01
 References:
 Output:
@@ -30,9 +30,9 @@ if (_rc) {
 
 
 //------------modify this
-global update_surveynames = 1   // 1 to update survey names.
-global replace           = 0  // 1 to replace data in memory even if it has not changed
-global p_drive_output_dir = 0   // 1 to use default Vintage_control folder
+global update_surveynames = 1  // 1 to update survey names.
+global replace            = 0  // 1 to replace data in memory even if it has not changed
+global p_drive_output_dir = 0  // 1 to use default Vintage_control folder
 //---------------------------
 
 
@@ -70,10 +70,10 @@ if (${update_surveynames} == 1) {
 
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
-local pattern = "LISSY_Dec2022.*txt"  // modify this
+local pattern = "LISSY_Jul2023.*txt"  // modify this
 //----------------------------------------------------
 
-//------------ crate frames
+//------------ create frames
 cap frame create txt // data from txt
 cap frame create nms // names 
 cap frame create cpi // CPI
@@ -95,9 +95,8 @@ frame txt {
 	drop if country_code == ""
 	
 	//------------ Change for WB ISO3 codes
-	replace country_code = "SRB" if country_code == "RSB"
-	
-	
+	*replace country_code = "SRB" if country_code == "RSB"  // LIS corrected Serbia's ISO3 in Spring 2023 release
+		
 	//------------check specific cases
 	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
 	
@@ -119,7 +118,8 @@ frame nms {
 
 //------------ CPIs
 frame cpi: {
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v08_M/Data/Stata/Support_2005_CPI_v08_M_v01_A_GMD_CPI_SM23.dta", clear
+**# Bookmark #1
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used.dta", clear
 	/*
 	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
 	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
@@ -141,9 +141,8 @@ frame cpi: {
 	/*(MV - Oct 2022)
 	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
 	*/
-	rename (code survname cpi_data_level) (country_code  survey_acronym datalevel)
+	rename (code survname) (country_code  survey_acronym)
 	tostring year, gen(surveyid_year)
-	destring datalevel, replace
 	sort country_code surveyid_year  datalevel survey_acronym 
 	
 }
