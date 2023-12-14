@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    15 Dec 2020 - 12:09:13
-Modification Date:  7/18/2023 (MV) 
+Modification Date:  12/13/2023 (MV) 
 Do-file version:    01
 References:          
 Output:             
@@ -114,7 +114,7 @@ frame repo {
 
 
 frame cpi: {
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Dec2023.dta", clear
    *use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v08_M/Data/Stata/Support_2005_CPI_v08_M_v01_A_GMD_CPI_SM23.dta", clear
    
 /*	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"

@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    11 Dec 2019 - 20:55:47
-Modification Date: 7/17/2023 (MV)
+Modification Date: 12/13/2023 (MV)
 Do-file version:    01
 References:
 Output:
@@ -70,7 +70,7 @@ if (${update_surveynames} == 1) {
 
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
-local pattern = "LISSY_Jul2023.*txt"  // modify this
+local pattern = "LISSY_Dec2023.*txt"  // modify this
 //----------------------------------------------------
 
 //------------ create frames
@@ -119,7 +119,7 @@ frame nms {
 //------------ CPIs
 frame cpi: {
 **# Bookmark #1
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Dec2023.dta", clear
 	/*
 	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
 	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
