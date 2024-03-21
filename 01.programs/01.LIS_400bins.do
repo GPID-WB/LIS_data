@@ -32,7 +32,7 @@ local surveys "`surveys'h"
 //------------Do NOT modify
 
 local countries "`silc' `nosilc'"
-numlist "1963/2021"
+numlist "1963/2022"
 local years = "`r(numlist)'"
 foreach year of loca years {
 	local y = substr("`year'", 3,.)
