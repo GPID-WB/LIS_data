@@ -39,6 +39,7 @@ drop if year==.
 
 * Remove old/duplicate survey/years (removed or replaced by LIS)
  drop if country_code=="AUT" & year==1987
+ drop if country_code=="AUT" & year==1995 & survey_acronym != "ECHP-LIS" 
  drop if country_code=="CAN" & year==1997 & survey_acronym != "SLID-LIS" 
  drop if country_code=="GBR" & year==1995 & survey_acronym != "FRS-LIS"  
  drop if country_code=="FRA" & year==1978 & survey_acronym != "TIS-LIS" 
@@ -46,7 +47,7 @@ drop if year==.
  drop if country_code=="FRA" & year==1989 
  drop if country_code=="FRA" & year==1994 
  drop if country_code=="FRA" & year==2000 & survey_acronym != "TSIS-LIS"  
- 
+ drop if country_code=="KOR" & year==2016 & survey_acronym != "SHFLC-LIS"  
  
 * Local with survey list
 egen concat = concat(country_code surveyid_year survey_acronym)

@@ -1,6 +1,0 @@
-//SCALAR rc
-1
-//STRING error
-Error in contrib.url(repos, "source") : 
-  trying to use CRAN without setting a mirror
-

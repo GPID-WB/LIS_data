@@ -19,6 +19,7 @@ Output:
 version 16
 
 //------------ Make sure rcall is installed
+
 cap which rcall
 if (_rc) {
 	cap which github
@@ -27,7 +28,6 @@ if (_rc) {
 	}
 	github install haghish/rcall, stable
 }
-
 
 //------------modify this
 global update_surveynames = 1  // 1 to update survey names.
@@ -67,7 +67,6 @@ if (${update_surveynames} == 1) {
 }
 
 
-
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
 local pattern = "LISSY_Mar2024.*txt"  // modify this
@@ -84,6 +83,7 @@ cap frame create cpi // CPI
 //========================================================
 
 drop _all
+
 frame txt {
 	rcall vanilla: source("`dir'/01.programs/LIStxt_2_dta.R");  /// Run functions
 	fls <- find_txt(path = "`path'", pattern = "`pattern'"); /// get text files paths
@@ -100,11 +100,15 @@ frame txt {
 	//------------check specific cases
 	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
 	
-	save "02.data/LIStxt_2_dta_temp.dta", replace
+	save "02.data/LIStxt_2_dta_temp2.dta", replace
 
 }
-
-
+/*
+frame txt {
+   *Using Minh's code	
+   use "02.data/LIStxt_2_dta_temp_alt.dta", clear
+}
+*/
 //========================================================
 //  Load all necessary data
 //========================================================
