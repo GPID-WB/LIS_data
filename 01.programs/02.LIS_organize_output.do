@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    11 Dec 2019 - 20:55:47
-Modification Date: 12/13/2023 (MV)
+Modification Date: 03/21/2024 (MV)
 Do-file version:    01
 References:
 Output:
@@ -19,6 +19,7 @@ Output:
 version 16
 
 //------------ Make sure rcall is installed
+
 cap which rcall
 if (_rc) {
 	cap which github
@@ -27,7 +28,6 @@ if (_rc) {
 	}
 	github install haghish/rcall, stable
 }
-
 
 //------------modify this
 global update_surveynames = 1  // 1 to update survey names.
@@ -67,10 +67,9 @@ if (${update_surveynames} == 1) {
 }
 
 
-
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
-local pattern = "LISSY_Dec2023.*txt"  // modify this
+local pattern = "LISSY_Mar2024.*txt"  // modify this
 //----------------------------------------------------
 
 //------------ create frames
@@ -84,6 +83,7 @@ cap frame create cpi // CPI
 //========================================================
 
 drop _all
+
 frame txt {
 	rcall vanilla: source("`dir'/01.programs/LIStxt_2_dta.R");  /// Run functions
 	fls <- find_txt(path = "`path'", pattern = "`pattern'"); /// get text files paths
@@ -100,11 +100,15 @@ frame txt {
 	//------------check specific cases
 	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
 	
-	save "02.data/LIStxt_2_dta_temp.dta", replace
+	save "02.data/LIStxt_2_dta_temp2.dta", replace
 
 }
-
-
+/*
+frame txt {
+   *Using Minh's code	
+   use "02.data/LIStxt_2_dta_temp_alt.dta", clear
+}
+*/
 //========================================================
 //  Load all necessary data
 //========================================================
@@ -119,7 +123,7 @@ frame nms {
 //------------ CPIs
 frame cpi: {
 **# Bookmark #1
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Dec2023.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Mar2024.dta", clear
 	/*
 	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
 	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
