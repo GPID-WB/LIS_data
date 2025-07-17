@@ -115,26 +115,11 @@ frame repo {
 
 
 frame cpi: {
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Mar2024.dta", clear
-   *use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Support_2005_CPI_v08_M/Data/Stata/Support_2005_CPI_v08_M_v01_A_GMD_CPI_SM23.dta", clear
-   
-/*	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
-	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
-	local cpivers ""
-	foreach cpifolder of local cpifolders {
-		if regexm("`cpifolder'", "([0-9]+)(_M$)") local ver = regexs(1)
-		local cpivers "`cpivers'`ver' "
-	}
-	local cpivers = trim("`cpivers'")
-	local cpivers:  subinstr local cpivers " " ", ", all
-	local maxver = max(`cpivers')
-	
-	if length("`maxver'") == 1 {
-		local maxver "0`maxver'"
-	}
-	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
-	use "`cpifile'", clear
-	
+	/* Load latest CPI databese (update version _Vxx_M)
+	dlw, country(Support) year(2005) type(GMDRAW) surveyid(Support_2005_CPI_v12_M) filename(Final_CPI_PPP_to_be_used.dta)
+	*/
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Dec2024.dta", clear
+
 	*/ //MV
 	*import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
 	

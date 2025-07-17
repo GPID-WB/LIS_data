@@ -6,7 +6,7 @@ url:
 Dependencies:  The World Bank
 ----------------------------------------------------
 Creation Date:    11 Dec 2019 - 20:55:47
-Modification Date: 03/21/2024 (MV)
+Modification Date: 12/12/2024 (MV)
 Do-file version:    01
 References:
 Output:
@@ -69,7 +69,7 @@ if (${update_surveynames} == 1) {
 
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
-local pattern = "LISSY_Mar2024.*txt"  // modify this
+local pattern = "LISSY_Dec2024.*txt"  // modify this
 //----------------------------------------------------
 
 //------------ create frames
@@ -100,15 +100,18 @@ frame txt {
 	//------------check specific cases
 	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
 	
-	save "02.data/LIStxt_2_dta_temp2.dta", replace
+	save "02.data/LIStxt_2_dta_temp.dta", replace
 
 }
-/*
+
+
+/* 
 frame txt {
    *Using Minh's code	
    use "02.data/LIStxt_2_dta_temp_alt.dta", clear
 }
 */
+
 //========================================================
 //  Load all necessary data
 //========================================================
@@ -123,25 +126,12 @@ frame nms {
 //------------ CPIs
 frame cpi: {
 **# Bookmark #1
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Mar2024.dta", clear
-	/*
-	local cpidir "//wbgfscifs01/GPWG-GMD/Datalib/GMD-DLW/Support/Support_2005_CPI/"
-	local cpifolders: dir "`cpidir'" dirs "*_M", respectcase
-	local cpivers ""
-	foreach cpifolder of local cpifolders {
-		if regexm("`cpifolder'", "([0-9]+)(_M$)") local ver = regexs(1)
-		local cpivers "`cpivers'`ver' "
-	}
-	local cpivers = trim("`cpivers'")
-	local cpivers:  subinstr local cpivers " " ", ", all
-	local maxver = max(`cpivers')
+	/* Load latest CPI databese (update version _Vxx_M)
+	dlw, country(Support) year(2005) type(GMDRAW) surveyid(Support_2005_CPI_v12_M) filename(Final_CPI_PPP_to_be_used.dta)
+	*/
 	
-	if length("`maxver'") == 1 {
-		local maxver "0`maxver'"
-	}
-	local cpifile "`cpidir'Support_2005_CPI_v`maxver'_M/Data/Stata/Final_CPI_PPP_to_be_used.dta"
-	use "`cpifile'", clear
-	*/ 
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Dec2024.dta", clear
+	
 	/*(MV - Oct 2022)
 	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
 	*/

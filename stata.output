@@ -1,0 +1,33 @@
+//SCALAR rc
+0
+//STRING fls
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_1.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_10.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_11.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_12.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_13.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_14.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_15.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_16.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_17.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_18.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_2.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_3.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_4.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_5.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_6.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_7.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_8.txt"  
+"C:/Users/wb463998/OneDrive - WBG/GIT/LIS_data/00.LIS_output/LISSY_Dec2024_9.txt"  
+//STRING pkgs
+"stringr"  
+"purrr"  
+"data.table"  
+"fs"  
+//STRING warning1
+In  : 
+//STRING not_in
+"FALSE"  
+"FALSE"  
+"FALSE"  
+"FALSE"  
