@@ -1,0 +1,5 @@
+_pip100862029 , https://api.worldbank.org/pip/v1/versions?format=csv
+_pip632618257 , https://api.worldbank.org/pip/v1/aux?table=countries&version=20240627_2017_01_02_PROD&format=csv
+_pip2008259629 , https://api.worldbank.org/pip/v1/aux?table=regions&version=20240627_2017_01_02_PROD&format=csv
+_pip551057467 , https://api.worldbank.org/pip/v1/aux?table=framework&version=20240627_2017_01_02_PROD&format=csv
+_pip1469186705 , https://api.worldbank.org/pip/v1/pip?country=all&year=all&ppp_version=2017&version=20240627_2017_01_02_PROD&povline=2.15&format=csv

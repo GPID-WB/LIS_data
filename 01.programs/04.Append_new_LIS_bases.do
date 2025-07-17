@@ -48,6 +48,8 @@ drop if year==.
  drop if country_code=="FRA" & year==1994 
  drop if country_code=="FRA" & year==2000 & survey_acronym != "TSIS-LIS"  
  drop if country_code=="KOR" & year==2016 & survey_acronym != "SHFLC-LIS"  
+ drop if country_code=="ESP" & year==1985 & survey_acronym != "HBCS-LIS"  
+ drop if country_code=="JPN" & survey_acronym != "JHPS-KHPS-LIS" 
  
 * Local with survey list
 egen concat = concat(country_code surveyid_year survey_acronym)
