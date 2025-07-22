@@ -69,7 +69,7 @@ if (${update_surveynames} == 1) {
 
 local path    = "`dir'/00.LIS_output"
 //------------------modify this-------------------
-local pattern = "LISSY_Dec2024.*txt"  // modify this
+local pattern = "LISSY_Jul2025.*txt"  // modify this
 //----------------------------------------------------
 
 //------------ create frames
@@ -100,7 +100,7 @@ frame txt {
 	//------------check specific cases
 	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
 	
-	save "02.data/LIStxt_2_dta_temp.dta", replace
+	save "02.data/LIStxt_temp.dta", replace
 
 }
 
@@ -130,7 +130,7 @@ frame cpi: {
 	dlw, country(Support) year(2005) type(GMDRAW) surveyid(Support_2005_CPI_v12_M) filename(Final_CPI_PPP_to_be_used.dta)
 	*/
 	
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Dec2024.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Jul2025.dta", clear
 	
 	/*(MV - Oct 2022)
 	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble

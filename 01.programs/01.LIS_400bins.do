@@ -17,8 +17,8 @@ Output:
 ==================================================*/
  
 //------------To modify
-*local silc   "at be cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk"  // 26 EUSILC countries
-*local nosilc "au br ca cl cn co do ge gt in il ci jp ml mx ps pa py pe ru za kr tw us uy vn"  // 26 rest
+*local silc   "at be bg cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk"  // 27 EUSILC countries
+*local nosilc "au br ca cl cn co do ge gt in il ci jp ml mx ps pa py pe ru za kr tw us uy vn"     // 26 rest
 
 local silc   "at"
 local nosilc "au br"
