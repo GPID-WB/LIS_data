@@ -118,7 +118,7 @@ frame cpi: {
 	/* Load latest CPI databese (update version _Vxx_M)
 	dlw, country(Support) year(2005) type(GMDRAW) surveyid(Support_2005_CPI_v12_M) filename(Final_CPI_PPP_to_be_used.dta)
 	*/
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Dec2024.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Jul2025.dta", clear
 
 	*/ //MV
 	*import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
@@ -176,7 +176,7 @@ qui while (`i' <= `n') {
 	//========================================================
 	
 	cap pcn load, countr(`country_code') year(`surveyid_year') ///
-	maindir("${maindir}") clear
+	survey(`survey_acronym') maindir("${maindir}") clear
 	
 	if (_rc) {
 		frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
