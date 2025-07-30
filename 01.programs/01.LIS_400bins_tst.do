@@ -17,7 +17,7 @@ Output:
 ==================================================*/
 clear all
 version 16.1
-// local dir "SampleData\\"
+local dir "SampleData//"
  
 //------------To modify
 *local silc   "at be bg cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk"  // 27 EUSILC countries
@@ -34,7 +34,7 @@ local surveys "`surveys'h"
 display "`surveys'"
 */
 //------------Do NOT modify
-//
+
 // local countries "`silc' `nosilc'"
 // numlist "1963/2023"
 // local years = "`r(numlist)'"
@@ -50,20 +50,16 @@ display "`surveys'"
 // }
 
 local surveys "us14i us16i us18i it14i it16i it20i mx16i mx14i mx18i"
-local surveys: subinstr local surveys " " "h ", all
+local surveys: subinstr local surveys " " "h `dir'", all
 local surveys "`surveys'h"
+local surveys "`dir'`surveys'"
 
 display "`surveys'"
 
-// foreach x of local surveys {
-// 	display "`x'"
-// 	use "`x'", clear
-// 	describe
-// }
 /*==================================================
               1: Program to calculate 400 bins
 ==================================================*/
-
+// clear all
 
 cap program drop _nq
 discard
@@ -103,14 +99,18 @@ qui {
 	
 	gen one = 1
 	
-	noi table `nvar'  [`weight' = `wgt'], c(sum one mean `varlist'  min `varlist' max `varlist')  /* 
+// 	version 15
+	noi table `nvar' [`weight' = `wgt'], c(sum one mean `varlist'  min `varlist' max `varlist')  /* 
 	 */ left concise format(%16.5f)
-	
+		 
 // 	noi table `nvar'  [`weight' = `wgt'], statistic(sum one) ///
 // 	statistic(mean `varlist') ///
 // 	statistic(min `varlist' ) ///
 // 	statistic (max `varlist')  /// 
 // 	nformat(%16.5f)
+
+	collapse (sum) weight=one (mean) welfare=`varlist'  (min) min=`varlist'  (max) max=`varlist' (first) country_code surveyid_year ///
+	wave currency [`weight' = `wgt'], by(`nvar')
 	
 }
 
@@ -120,31 +120,66 @@ end
         2:  Loop over surveys
 ==================================================*/
 
-// use SampleData/it14ih, clear
+// use SampleData/it20ih, clear
+local i = 1
+
 foreach x of local surveys {
-	cap {
+// 	cap {
 		use "`x'", clear
 		
-		local iso  = upper(iso3[1])
-		local year = year[1]
+// 		local iso  = upper(iso3[1])
+// 		local year = year[1]
+// 		local wave = wave[1]
+// 		local currency : label currency `=currency[1]'
+		
+		local country_code = upper(iso3[1])
+		local surveyid_year = year[1]
 		local wave = wave[1]
-		local currency : label currency `=currency[1]'
+		decode currency, gen(curr)
+		split curr, parse(-)
+		rename currency currency_num
+		rename curr2 currency
+		local currency = currency[1]
+		drop curr curr1 
 
-
-		keep hid  dhi hpopwgt nhhmem 
-		gen double popw=hpopwgt*nhhmem 
+// 		keep hid  dhi hpopwgt nhhmem
+		
+		keep hid  dhi hpopwgt nhhmem iso3 year wave currency
+		rename iso3 country_code
+		rename year surveyid_year 
+		
+		gen double popw = hpopwgt*nhhmem 
+		
 		gen double lcu_pc = (dhi/nhhmem) // leave it annual per capita
 
 		drop if (lcu_pc < 0 | lcu_pc >= . | popw >= .)
-	}
+// 	}
 // 	if (_rc) continue
 	
-	noi mata: printf("##1 `iso' `year' `wave'\n")
+	noi mata: printf("##1 `country_code' `surveyid_year' `wave'\n")
 	noi mata: printf("##2 `currency'\n")
 	_nq lcu_pc [pw = popw], nq(400) nvar(nq)
+	
+// 	preserve 
+	if `i' == 1 {
+		
+        tempfile datasofar
+        save `datasofar'
+		
+    } 
+	else {
+	
+	append using "`datasofar'"
+	save `datasofar', replace
+	
+	}
+	
+	local ++i
 }
 
+use `datasofar', clear
 
+save combined_data.dta, replace
 
 
 exit
