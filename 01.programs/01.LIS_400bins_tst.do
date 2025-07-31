@@ -23,8 +23,8 @@ local dir "SampleData//"
 *local silc   "at be bg cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk"  // 27 EUSILC countries
 *local nosilc "au br ca cl cn co do ge gt in il ci jp ml mx ps pa py pe ru za kr tw us uy vn"     // 26 rest
 
-// local silc   "it"
-// local nosilc "us mx"
+local silc   "it"
+local nosilc "us mx"
 /* 
 local surveys "us13 us16 de15 de16 il16 il14"
 local y = substr("`surveys'", 3,.)
@@ -35,31 +35,32 @@ display "`surveys'"
 */
 //------------Do NOT modify
 
-// local countries "`silc' `nosilc'"
-// numlist "1963/2023"
-// local years = "`r(numlist)'"
-// foreach year of loca years {
-// 	local y = substr("`year'", 3,.)
-// 	local ys "`ys' `y'"
-// }
-//
-// foreach c of local countries {
-// 	foreach y of local ys {
-// 		local surveys "`surveys' `dir'`c'`y'ih"
-// 	}
-// }
+local countries "`silc' `nosilc'"
+numlist "1963/2023"
+local years = "`r(numlist)'"
+foreach year of loca years {
+	local y = substr("`year'", 3,.)
+	local ys "`ys' `y'"
+}
 
-local surveys "us14i us16i us18i it14i it16i it20i mx16i mx14i mx18i"
-local surveys: subinstr local surveys " " "h `dir'", all
-local surveys "`surveys'h"
-local surveys "`dir'`surveys'"
+foreach c of local countries {
+	foreach y of local ys {
+		local surveys "`surveys' `dir'`c'`y'ih"
+	}
+}
 
+//------ Add sample surveys
+// local surveys "us14i us16i us18i it14i it16i it20i mx16i mx14i mx18i"
+// local surveys: subinstr local surveys " " "h `dir'", all
+// local surveys "`surveys'h"
+// local surveys "`dir'`surveys'"
+
+//------- Check path is used
 display "`surveys'"
 
 /*==================================================
               1: Program to calculate 400 bins
 ==================================================*/
-// clear all
 
 cap program drop _nq
 discard
@@ -99,15 +100,20 @@ qui {
 	
 	gen one = 1
 	
+	// create table .txt
+	
 // 	version 15
 	noi table `nvar' [`weight' = `wgt'], c(sum one mean `varlist'  min `varlist' max `varlist')  /* 
 	 */ left concise format(%16.5f)
-		 
+
+// 	version 17
 // 	noi table `nvar'  [`weight' = `wgt'], statistic(sum one) ///
 // 	statistic(mean `varlist') ///
 // 	statistic(min `varlist' ) ///
 // 	statistic (max `varlist')  /// 
 // 	nformat(%16.5f)
+
+	// create dataset
 
 	collapse (sum) weight=one (mean) welfare=`varlist'  (min) min=`varlist'  (max) max=`varlist' (first) country_code surveyid_year ///
 	wave currency [`weight' = `wgt'], by(`nvar')
@@ -120,11 +126,10 @@ end
         2:  Loop over surveys
 ==================================================*/
 
-// use SampleData/it20ih, clear
 local i = 1
 
 foreach x of local surveys {
-// 	cap {
+	cap {
 		use "`x'", clear
 		
 // 		local iso  = upper(iso3[1])
@@ -135,6 +140,7 @@ foreach x of local surveys {
 		local country_code = upper(iso3[1])
 		local surveyid_year = year[1]
 		local wave = wave[1]
+		
 		decode currency, gen(curr)
 		split curr, parse(-)
 		rename currency currency_num
@@ -153,14 +159,13 @@ foreach x of local surveys {
 		gen double lcu_pc = (dhi/nhhmem) // leave it annual per capita
 
 		drop if (lcu_pc < 0 | lcu_pc >= . | popw >= .)
-// 	}
-// 	if (_rc) continue
+	}
+	if (_rc) continue
 	
 	noi mata: printf("##1 `country_code' `surveyid_year' `wave'\n")
 	noi mata: printf("##2 `currency'\n")
 	_nq lcu_pc [pw = popw], nq(400) nvar(nq)
 	
-// 	preserve 
 	if `i' == 1 {
 		
         tempfile datasofar
@@ -180,7 +185,6 @@ foreach x of local surveys {
 use `datasofar', clear
 
 save combined_data.dta, replace
-
 
 exit
 /* End of do-file */
