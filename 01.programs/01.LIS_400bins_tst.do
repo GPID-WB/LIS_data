@@ -130,17 +130,15 @@ local i = 1
 
 foreach x of local surveys {
 	cap {
+		* Load file
 		use "`x'", clear
 		
-// 		local iso  = upper(iso3[1])
-// 		local year = year[1]
-// 		local wave = wave[1]
-// 		local currency : label currency `=currency[1]'
-		
+		* Create locals
 		local country_code = upper(iso3[1])
 		local surveyid_year = year[1]
 		local wave = wave[1]
 		
+		* Fix currency
 		decode currency, gen(curr)
 		split curr, parse(-)
 		rename currency currency_num
@@ -148,11 +146,10 @@ foreach x of local surveys {
 		local currency = currency[1]
 		drop curr curr1 
 
-// 		keep hid  dhi hpopwgt nhhmem
-		
+		* Clean data
 		keep hid  dhi hpopwgt nhhmem iso3 year wave currency
 		rename iso3 country_code
-		rename year surveyid_year 
+		rename year surveyid_year
 		
 		gen double popw = hpopwgt*nhhmem 
 		
@@ -162,10 +159,18 @@ foreach x of local surveys {
 	}
 	if (_rc) continue
 	
+	* Run table and function
 	noi mata: printf("##1 `country_code' `surveyid_year' `wave'\n")
 	noi mata: printf("##2 `currency'\n")
 	_nq lcu_pc [pw = popw], nq(400) nvar(nq)
 	
+	* Final formatting
+	drop nq
+	tostring surveyid_year, replace
+	tostring wave, replace
+	replace country_code = upper(country_code)
+
+	* Save file
 	if `i' == 1 {
 		
         tempfile datasofar
