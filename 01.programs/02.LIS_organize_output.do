@@ -318,13 +318,17 @@ qui while (`i' <= `n') {
 		local ddir "`outputdit'/`country_code'/`cy_dir'/`svid'/data" // data dir
 		cap mkdir "`ddir'"
 			
-		if (inlist(`rcds',9,601)  & ${replace} == 1 ) {  // data has changed
+		if (inlist(`rcds',9,601)  & ${replace} == 1 ) {  // data has changed and wanted to replace
 			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
 			("replaced`msg'")
 		}
+		else if (inlist(`rcds',9)  & ${replace} != 1 ) {  // data has changed but not replacing
+			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
+			("changed`msg'")
+		}
 		else {
 			frame post res ("`country_code'") ("`surveyid_year'") ("`survey_acronym'") ///
-			("saved`msg'")
+			("new`msg'")
 		}
 	
 		save "`ddir'/`svid'_BIN.dta", replace
