@@ -51,6 +51,10 @@ foreach i of global nloop {
         continue
     }
 
+    // load the data to be uploaded
+
+
+
     local primus_cmd "primus_gmdupload, country(`country_code') year(`surveyid_year') survey(`survey_acronym') `cmd_update' $common_opts"
     
     noi disp _n "{input: `i'-->}" `"{res: `primus_cmd'}"'
