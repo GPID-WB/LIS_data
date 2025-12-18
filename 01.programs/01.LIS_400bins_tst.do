@@ -15,45 +15,46 @@ Output:
 /*==================================================
               0: Program set up
 ==================================================*/
+// cd "E:\PovcalNet\01.personal\wb535623\PIP\LIS_data\01.programs"
 clear all
-version 16.1
+// version 16.1
 local dir "SampleData//"
  
 //------------To modify
 *local silc   "at be bg cz dk ee fi fr de gr hu is ie it lt lu nl no pl ro rs sk si es se ch uk"  // 27 EUSILC countries
 *local nosilc "au br ca cl cn co do ge gt in il ci jp ml mx ps pa py pe ru za kr tw us uy vn"     // 26 rest
 
-local silc   "it"
-local nosilc "us mx"
-/* 
-local surveys "us13 us16 de15 de16 il16 il14"
-local y = substr("`surveys'", 3,.)
-local year "20`y'"
-local surveys: subinstr local surveys " " "h ", all
-local surveys "`surveys'h"
-display "`surveys'"
-*/
+// local silc   "it"
+// local nosilc "us mx"
+
+// local surveys "us13 us16 de15 de16 il16 il14"
+// local y = substr("`surveys'", 3,.)
+// local year "20`y'"
+// local surveys: subinstr local surveys " " "h ", all
+// local surveys "`surveys'h"
+// display "`surveys'"
+
 //------------Do NOT modify
 
-local countries "`silc' `nosilc'"
-numlist "1963/2023"
-local years = "`r(numlist)'"
-foreach year of loca years {
-	local y = substr("`year'", 3,.)
-	local ys "`ys' `y'"
-}
-
-foreach c of local countries {
-	foreach y of local ys {
-		local surveys "`surveys' `dir'`c'`y'ih"
-	}
-}
+// local countries "`silc' `nosilc'"
+// numlist "1963/2023"
+// local years = "`r(numlist)'"
+// foreach year of loca years {
+// 	local y = substr("`year'", 3,.)
+// 	local ys "`ys' `y'"
+// }
+//
+// foreach c of local countries {
+// 	foreach y of local ys {
+// 		local surveys "`surveys' `dir'`c'`y'ih"
+// 	}
+// }
 
 //------ Add sample surveys
-// local surveys "us14i us16i us18i it14i it16i it20i mx16i mx14i mx18i"
-// local surveys: subinstr local surveys " " "h `dir'", all
-// local surveys "`surveys'h"
-// local surveys "`dir'`surveys'"
+local surveys "us14i us16i us18i it14i it16i it20i mx16i mx14i mx18i"
+local surveys: subinstr local surveys " " "h `dir'", all
+local surveys "`surveys'h"
+local surveys "`dir'`surveys'"
 
 //------- Check path is used
 display "`surveys'"
@@ -103,20 +104,37 @@ qui {
 	// create table .txt
 	
 // 	version 15
-	noi table `nvar' [`weight' = `wgt'], c(sum one mean `varlist'  min `varlist' max `varlist')  /* 
-	 */ left concise format(%16.5f)
+// 	noi table `nvar' [`weight' = `wgt'], c(sum one mean `varlist'  min `varlist' max `varlist')  /* 
+// 	 */ left concise format(%16.5f)
 
 // 	version 17
-// 	noi table `nvar'  [`weight' = `wgt'], statistic(sum one) ///
-// 	statistic(mean `varlist') ///
-// 	statistic(min `varlist' ) ///
-// 	statistic (max `varlist')  /// 
-// 	nformat(%16.5f)
+	noi table `nvar'  [`weight' = `wgt'], statistic(sum one) ///
+	statistic(mean `varlist') ///
+	statistic(min `varlist' ) ///
+	statistic (max `varlist')  /// 
+	nformat(%16.5f)
 
 	// create dataset
+	// Create a skeleton of bins from 1..`nq' so empty bins are preserved after collapse
+	preserve
+	quietly keep `nvar'
+	collapse (first) nbin=`nvar'
+	keep if _n==1
+	tempname ske
+	tempfile skeleton
+	set obs `nq'
+	gen long `nvar' = _n
+	save `skeleton', replace
+	restore
 
+	// Now collapse the actual stats by bin
 	collapse (sum) weight=one (mean) welfare=`varlist'  (min) min=`varlist'  (max) max=`varlist' (first) country_code surveyid_year ///
 	wave currency [`weight' = `wgt'], by(`nvar')
+
+	// Merge with skeleton to keep bins with zero counts
+	merge 1:1 `nvar' using `skeleton', nogenerate keepusing(nbin)
+	// For bins that were missing in the collapsed result, set weight to 0
+	replace weight = 0 if missing(weight)
 	
 }
 
@@ -129,7 +147,7 @@ end
 local i = 1
 
 foreach x of local surveys {
-	cap {
+	*cap {
 		* Load file
 		use "`x'", clear
 		
@@ -156,13 +174,13 @@ foreach x of local surveys {
 		gen double lcu_pc = (dhi/nhhmem) // leave it annual per capita
 
 		drop if (lcu_pc < 0 | lcu_pc >= . | popw >= .)
-	}
-	if (_rc) continue
+	*}
+	*if (_rc) continue
 	
 	* Run table and function
 	noi mata: printf("##1 `country_code' `surveyid_year' `wave'\n")
 	noi mata: printf("##2 `currency'\n")
-	_nq lcu_pc [pw = popw], nq(400) nvar(nq)
+	_nq lcu_pc [pw = popw], nq(1000) nvar(nq)
 	
 	* Final formatting
 	drop nq
