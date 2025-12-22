@@ -1,6 +1,3 @@
-# library(ggplot2)
-library(data.table)
-library(collapse)
 
 ##' Compute weighted Lorenz table by reporting level
 ##'
@@ -31,8 +28,8 @@ library(collapse)
 ##' `new_bins()`.
 ##'
 ##' @examples
-##' 
-##' 
+##'
+##'
 ##' # Example (small synthetic dataset)
 ##' # dt <- data.table::data.table(
 ##' #   reporting_level = rep("national", 5),
@@ -197,3 +194,59 @@ new_bins <- function(welfare, weight, nbins = 100, tolerance = 1e-6, id = NULL) 
     welfare = out_welfare[1:(out_index - 1)]
   )
 }
+
+
+
+# Code for LIS
+
+## libraries
+library(data.table)
+library(collapse)
+library(readstata13)
+
+## List surveys
+
+surveys <- c("us14ih.dta", "us16ih.dta", "us18ih.dta", "it14ih.dta", "it16ih.dta", "it20ih.dta", "mx16ih.dta", "mx14ih.dta", "mx18ih.dta")
+
+path <- "E:/PovcalNet/01.personal/wb535623/PIP/LIS_data/01.programs/SampleData"
+
+files <- lapply(surveys, \(x) fs::path(path, x))
+
+## LIS function
+
+LIS_bins_data <- function(file){
+
+  data <- read.dta13(file)
+
+  data_clean <- data|>
+    fselect(hid, dhi, hpopwgt, nhhmem, iso3, year, wave, currency)|>
+    fmutate(nhhmem = as.numeric(nhhmem),
+            weight = hpopwgt*nhhmem, # It is called popw in Stata code
+            welfare = dhi*nhhmem, # It is called lcu_pc in Stata code
+            reporting_level = "national")|>
+    fsubset(welfare>=0 & !is.na(welfare))|>
+    as.data.table()
+
+  ## Run lorenz function
+  bin_data <- lorenz_table(data_clean, nq = 1000)
+
+  # Add extra info
+  final_data <- bin_data |>
+    fmutate(country_code = funique(data_clean$iso3),
+            surveyid_year = funique(data_clean$year),
+            wave = funique(data_clean$wave),
+            min = fmin(data_clean$welfare),
+            max = fmax(data_clean$welfare),
+            currency = tstrsplit(as.character(funique(data_clean$currency)), "-", fixed = TRUE, keep = 1:2)[[2]])
+
+  print(head(final_data))
+  print(nrow(final_data))
+
+  return(final_data)
+}
+
+# Run for all files
+
+final <- rbindlist(lapply(files, LIS_bins_data))
+
+
