@@ -206,25 +206,27 @@ library(readstata13)
 
 ## List surveys
 
-surveys <- c("us14ih.dta", "us16ih.dta", "us18ih.dta", "it14ih.dta", "it16ih.dta", "it20ih.dta", "mx16ih.dta", "mx14ih.dta", "mx18ih.dta")
+# surveys <- c("us14ih.dta", "us16ih.dta", "us18ih.dta", "it14ih.dta", "it16ih.dta", "it20ih.dta", "mx16ih.dta", "mx14ih.dta", "mx18ih.dta")
+#
+# path <- "E:/PovcalNet/01.personal/wb535623/PIP/LIS_data/01.programs/SampleData"
+#
+# files <- lapply(surveys, \(x) fs::path(path, x))
 
-path <- "E:/PovcalNet/01.personal/wb535623/PIP/LIS_data/01.programs/SampleData"
-
-files <- lapply(surveys, \(x) fs::path(path, x))
+surveys <- c("hu09h","hu12h","hu15h","lu10h")
 
 ## LIS function
 
 LIS_bins_data <- function(file){
 
-  data <- read.dta13(file)
+  data <- read.LIS(file) # change to read.LIS/reas.dta13
 
   data_clean <- data|>
     fselect(hid, dhi, hpopwgt, nhhmem, iso3, year, wave, currency)|>
     fmutate(nhhmem = as.numeric(nhhmem),
             weight = hpopwgt*nhhmem, # It is called popw in Stata code
-            welfare = dhi*nhhmem, # It is called lcu_pc in Stata code
+            welfare = dhi/nhhmem, # It is called lcu_pc in Stata code
             reporting_level = "national")|>
-    fsubset(welfare>=0 & !is.na(welfare))|>
+    fsubset(welfare>=0 & !is.na(welfare) & !is.na(weight))|>
     as.data.table()
 
   ## Run lorenz function
@@ -247,6 +249,10 @@ LIS_bins_data <- function(file){
 
 # Run for all files
 
-final <- rbindlist(lapply(files, LIS_bins_data))
+final <- rbindlist(lapply(surveys, LIS_bins_data))
+
+# Save file
+# save(final, file = "final.rds")
+save(final, file = "$mydata/mviver/wb_1000bin_append_Dec2025.rds")
 
 
