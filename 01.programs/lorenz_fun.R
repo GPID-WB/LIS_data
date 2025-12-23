@@ -239,7 +239,7 @@ LIS_bins_data <- function(file){
 
   tryCatch(
     expr ={
-      data <- read.LIS(file) # change to read.LIS/reas.dta13
+      data <- read.LIS(file) # change to read.LIS/read.dta13
 
       data_clean <- data|>
         fselect(hid, dhi, hpopwgt, nhhmem, iso3, year, wave, currency)|>
@@ -255,7 +255,7 @@ LIS_bins_data <- function(file){
 
       # Add extra info
       final_data <- bin_data |>
-        fmutate(country_code = funique(data_clean$iso3),
+        fmutate(country_code = toupper(funique(data_clean$iso3)),
                 surveyid_year = funique(data_clean$year),
                 wave = funique(data_clean$wave),
                 min = fmin(data_clean$welfare),
@@ -282,6 +282,7 @@ nrow(final) # It has to be a multiplier of the bins
 
 # Save file
 # save(final, file = "final.rds")
-save(final, file = "$mydata/mviver/wb_1000bin_append_Dec2025.rds")
+
+readr::write_csv(final, paste0(USR_DIR, "mviver/", "wb_1000bin_append_Dec2025.csv"))
 
 
