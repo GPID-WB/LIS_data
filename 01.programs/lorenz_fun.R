@@ -204,52 +204,81 @@ library(data.table)
 library(collapse)
 library(readstata13)
 
-## List surveys
+# ## For a Full Run
+# silc <- c("at","be","bg","cz","dk","ee","fi","fr","de","gr","hu","is","ie","it","lt","lu","nl","no","pl","ro","rs","sk","si","es","se","ch","uk")
+# nosilc <- c("au","br","ca","cl","cn","co","do","ge","gt","in","il","ci","jp","ml","mx","ps","pa","py","pe","ru","za","kr","tw","us","uy","vn")
+#
+# # Build years 1963..2023 and extract last two digits
+# years_full <- 1963:2023
+# yrs <- formatC(years_full %% 100, width = 2, flag = "0") # "63", "64", ..., "23"
+#
+# # Combine countries
+# countries <- c(silc, nosilc)
+#
+# # Build surveys: for each country and each two-digit year, create strings like "at63h"
+# surveys <- as.vector(outer(countries, yrs,
+#                            FUN = function(c, y) paste0(c, y, "h")))
 
+# ## For Sample Data:
 # surveys <- c("us14ih.dta", "us16ih.dta", "us18ih.dta", "it14ih.dta", "it16ih.dta", "it20ih.dta", "mx16ih.dta", "mx14ih.dta", "mx18ih.dta")
+#
+# surveys <- c("us14ih.dta", "us15ih.dta", "us16ih.dta", "us17ih.dta", "us18ih.dta",
+#              "it14ih.dta", "it15ih.dta", "it16ih.dta", "it17ih.dta", "it20ih.dta",
+#              "mx16ih.dta", "mx15ih.dta", "mx14ih.dta",  "mx17ih.dta", "mx18ih.dta")
 #
 # path <- "E:/PovcalNet/01.personal/wb535623/PIP/LIS_data/01.programs/SampleData"
 #
-# files <- lapply(surveys, \(x) fs::path(path, x))
+# surveys <- lapply(surveys, \(x) fs::path(path, x))
 
-surveys <- c("hu09h","hu12h","hu15h","lu10h")
+## For Test Data
+surveys <- c("hu09h","hu10h","hu11h","hu12h","hu13h","hu14h","hu15h","lu10h")
 
 ## LIS function
 
 LIS_bins_data <- function(file){
 
-  data <- read.LIS(file) # change to read.LIS/reas.dta13
+  tryCatch(
+    expr ={
+      data <- read.LIS(file) # change to read.LIS/reas.dta13
 
-  data_clean <- data|>
-    fselect(hid, dhi, hpopwgt, nhhmem, iso3, year, wave, currency)|>
-    fmutate(nhhmem = as.numeric(nhhmem),
-            weight = hpopwgt*nhhmem, # It is called popw in Stata code
-            welfare = dhi/nhhmem, # It is called lcu_pc in Stata code
-            reporting_level = "national")|>
-    fsubset(welfare>=0 & !is.na(welfare) & !is.na(weight))|>
-    as.data.table()
+      data_clean <- data|>
+        fselect(hid, dhi, hpopwgt, nhhmem, iso3, year, wave, currency)|>
+        fmutate(nhhmem = as.numeric(nhhmem),
+                weight = hpopwgt*nhhmem, # It is called popw in Stata code
+                welfare = dhi/nhhmem, # It is called lcu_pc in Stata code
+                reporting_level = "national")|>
+        fsubset(welfare>=0 & !is.na(welfare) & !is.na(weight))|>
+        as.data.table()
 
-  ## Run lorenz function
-  bin_data <- lorenz_table(data_clean, nq = 1000)
+      ## Run lorenz function
+      bin_data <- lorenz_table(data_clean, nq = 1000) # Change for bins
 
-  # Add extra info
-  final_data <- bin_data |>
-    fmutate(country_code = funique(data_clean$iso3),
-            surveyid_year = funique(data_clean$year),
-            wave = funique(data_clean$wave),
-            min = fmin(data_clean$welfare),
-            max = fmax(data_clean$welfare),
-            currency = tstrsplit(as.character(funique(data_clean$currency)), "-", fixed = TRUE, keep = 1:2)[[2]])
+      # Add extra info
+      final_data <- bin_data |>
+        fmutate(country_code = funique(data_clean$iso3),
+                surveyid_year = funique(data_clean$year),
+                wave = funique(data_clean$wave),
+                min = fmin(data_clean$welfare),
+                max = fmax(data_clean$welfare),
+                currency = tstrsplit(as.character(funique(data_clean$currency)), "-", fixed = TRUE, keep = 1:2)[[2]])
 
-  print(head(final_data))
-  print(nrow(final_data))
+      print(head(final_data))
+      print(nrow(final_data))
 
-  return(final_data)
+      return(final_data)
+    },
+    error = function(e){
+      return(NULL)
+    }
+  )
+
+  return(NULL)
 }
 
 # Run for all files
 
 final <- rbindlist(lapply(surveys, LIS_bins_data))
+nrow(final) # It has to be a multiplier of the bins
 
 # Save file
 # save(final, file = "final.rds")
