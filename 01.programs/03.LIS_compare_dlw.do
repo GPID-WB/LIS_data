@@ -5,8 +5,8 @@ E-email:       acastanedaa@worldbank.org
 url:           
 Dependencies:  The World Bank
 ----------------------------------------------------
-Creation Date:    15 Dec 2020 - 12:09:13
-Modification Date:  03/21/2024 (MV) 
+Creation Date:      15 Dec 2020 - 12:09:13
+Modification Date:  12 Jan 2026 (MV) 
 Do-file version:    01
 References:          
 Output:             
@@ -118,7 +118,7 @@ frame cpi: {
 	/* Load latest CPI databese (update version _Vxx_M)
 	dlw, country(Support) year(2005) type(GMDRAW) surveyid(Support_2005_CPI_v12_M) filename(Final_CPI_PPP_to_be_used.dta)
 	*/
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Jul2025.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Jan2026.dta", clear
 
 	*/ //MV
 	*import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
@@ -193,7 +193,7 @@ qui while (`i' <= `n') {
 	sum weight, meanonly
 	local wtpcn  = r(mean)
 	
-	fastgini welfare [w=weight]
+	fastgini welfare [w=weight], nocheck
 	local gnpcn =  r(gini)
 	
 	
@@ -235,7 +235,7 @@ qui while (`i' <= `n') {
 			sum weight, meanonly
 			local wtdlw = r(mean)
 			
-			fastgini welfare [w=weight]
+			fastgini welfare [w=weight], nocheck
 			local gndlw =  r(gini)
 		}
 		

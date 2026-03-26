@@ -1,7 +1,7 @@
 /*===========================================================================
 Project:     Append new LIS dbs + those that have changed to be shared with Minh
 Created:     Jan 2020
-Modified:	 Dec 13 2023
+Modified:	 Jan 12 2026
 Author:      Martha Viveros
 Institution: World Bank Group - Povcalnet Team
 ============================================================================*/
@@ -50,6 +50,7 @@ drop if year==.
  drop if country_code=="KOR" & year==2016 & survey_acronym != "SHFLC-LIS"  
  drop if country_code=="ESP" & year==1985 & survey_acronym != "HBCS-LIS"  
  drop if country_code=="JPN" & survey_acronym != "JHPS-KHPS-LIS" 
+ drop if country_code=="SWE" & year==1967
  
 * Local with survey list
 egen concat = concat(country_code surveyid_year survey_acronym)

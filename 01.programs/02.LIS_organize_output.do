@@ -5,8 +5,8 @@ E-email:       acastanedaa@worldbank.org
 url:
 Dependencies:  The World Bank
 ----------------------------------------------------
-Creation Date:    11 Dec 2019 - 20:55:47
-Modification Date: 12/12/2024 (MV)
+Creation Date:      11 Dec 2019 - 20:55:47
+Modification Date:  12 Jan 2025 (MV)
 Do-file version:    01
 References:
 Output:
@@ -16,7 +16,7 @@ Output:
 0: Program set up
 ==================================================*/
 
-version 16
+version 16.1
 
 //------------ Make sure rcall is installed
 
@@ -34,7 +34,6 @@ global update_surveynames = 1  // 1 to update survey names.
 global replace            = 0  // 1 to replace data in memory even if it has not changed
 global p_drive_output_dir = 0  // 1 to use default Vintage_control folder
 //---------------------------
-
 
 
 //------------Add personal drive cloned from github repo
@@ -67,24 +66,25 @@ if (${update_surveynames} == 1) {
 }
 
 
-local path    = "`dir'/00.LIS_output"
-//------------------modify this-------------------
-local pattern = "LISSY_Jul2025.*txt"  // modify this
-//----------------------------------------------------
-
 //------------ create frames
 cap frame create txt // data from txt
 cap frame create nms // names 
 cap frame create cpi // CPI
 
-
-//========================================================
-//  Get txt data to dta using function in R
-//========================================================
-
 drop _all
 
+//========================================================
+//  (OLD) Get txt data to dta using function in R
+//========================================================
+
+/*
+local path    = "`dir'/00.LIS_output"
+//------------------modify this-------------------
+local pattern = "LISSY_Jul2025.*txt"  // modify this
+//----------------------------------------------------
+
 frame txt {
+	
 	rcall vanilla: source("`dir'/01.programs/LIStxt_2_dta.R");  /// Run functions
 	fls <- find_txt(path = "`path'", pattern = "`pattern'"); /// get text files paths
 	ls_frames <- map(fls, frames_in_txt); /// list of frames in each txt
@@ -101,9 +101,8 @@ frame txt {
 	* keep if country_code == "DEU" & surveyid_year == "2004"  // to delete
 	
 	save "02.data/LIStxt_temp.dta", replace
-
-}
-
+} 
+*/
 
 /* 
 frame txt {
@@ -111,6 +110,34 @@ frame txt {
    use "02.data/LIStxt_2_dta_temp_alt.dta", clear
 }
 */
+
+//========================================================
+//  Load 1000 bin CSV data from LIS and transform in DTA
+//========================================================
+frame txt {
+	
+	***  Load 1000 bin csv data from LIS ****
+	import delimited "C:\Users\wb463998\OneDrive - WBG\GIT\LIS_data\02.data\wb_1000bin_append_Jan2026.csv"
+	
+	keep pop avg_welfare min max country_code surveyid_year wave currency
+
+	ren avg_welfare welfare
+	ren pop weight
+	 
+	recast double max min welfare
+	format %10.0g max min welfare
+
+	split wave, parse("[")
+	split wave2, parse("]")
+	drop wave wave1 wave2 wave22
+	ren wave21 wave
+ 
+    order weight welfare min max country_code surveyid_year wave currency
+	tostring surveyid_year, replace
+	
+	save "02.data/LIStxt_temp.dta", replace
+
+}
 
 //========================================================
 //  Load all necessary data
@@ -125,12 +152,11 @@ frame nms {
 
 //------------ CPIs
 frame cpi: {
-**# Bookmark #1
 	/* Load latest CPI databese (update version _Vxx_M)
-	dlw, country(Support) year(2005) type(GMDRAW) surveyid(Support_2005_CPI_v12_M) filename(Final_CPI_PPP_to_be_used.dta)
+	dlw, country(Support) year(2005) type(GMDRAW) surveyid(Support_2005_CPI_v14_M) filename(Final_CPI_PPP_to_be_used.dta)
 	*/
 	
-	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Jul2025.dta", clear
+	use "p:/01.PovcalNet/03.QA/08.DLW/Support/Support_2005_CPI/Final_CPI_PPP_to_be_used_Jan2026.dta", clear
 	
 	/*(MV - Oct 2022)
 	import delimited "https://github.com/PIP-Technical-Team/aux_cpi/raw/main/cpi.csv", clear varn(1) asdouble
@@ -244,6 +270,14 @@ qui while (`i' <= `n') {
 			}
 			
 		} // end Euro condition 
+		
+		//---------- Adjust welfare if ISR 1979 & 1986 (condition added by MV 1/21/26)
+		if country_code == "ISR" & surveyid_year < "1992"{
+			
+			replace welfare = welfare*1000
+			
+		} // end ISR condition
+		
 		
 		keep welfare weight min max
 		
