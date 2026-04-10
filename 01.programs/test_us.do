@@ -1,0 +1,653 @@
+
+
+cap mata: mata drop __lis_new_bins()
+mata:
+void __lis_new_bins(
+    string scalar idvar,
+    string scalar welfarevar,
+    string scalar weightvar,
+    string scalar grpvar,
+    real scalar nbins,
+    real scalar tolerance)
+{
+    real matrix X, panel, out
+    real colvector id, welfare, weight, grp
+    real scalar n, groups, maxout, out_n
+    real scalar g, start, stop, i
+    real scalar totalweight, binsize, curbin, curweight
+    real scalar remaining, room, take
+    real scalar last_id, last_welfare, last_remaining
+
+    X = st_data(., (idvar, welfarevar, weightvar, grpvar))
+    n = rows(X)
+
+    if (n == 0) {
+        stata("drop _all")
+        st_addvar("double", "id")
+        st_addvar("long", grpvar)
+        st_addvar("long", "bin")
+        st_addvar("double", "weight")
+        st_addvar("double", "welfare")
+        return
+    }
+
+    id      = X[, 1]
+    welfare = X[, 2]
+    weight  = X[, 3]
+    grp     = X[, 4]
+
+    panel  = panelsetup(grp, 1)
+    groups = rows(panel)
+    maxout = n + groups * (nbins - 1)
+    out    = J(maxout, 5, .)
+    out_n  = 0
+
+    for (g = 1; g <= groups; g++) {
+        start = panel[g, 1]
+        stop  = panel[g, 2]
+
+        totalweight = sum(weight[|start \ stop|])
+        if (totalweight <= 0) {
+            continue
+        }
+
+        binsize   = totalweight / nbins
+        curbin    = 1
+        curweight = 0
+        last_id = .
+        last_welfare = .
+        last_remaining = 0
+
+        for (i = start; i <= stop; i++) {
+            remaining = weight[i]
+
+            if (remaining <= 0) {
+                continue
+            }
+
+            while (remaining > 0 & curbin <= nbins) {
+                room = binsize - curweight
+
+                if (abs(room) < tolerance) {
+                    curbin = curbin + 1
+                    curweight = 0
+                    continue
+                }
+
+                take = min((remaining, room))
+
+                if (out_n >= rows(out)) {
+                    out = out \ J(max((n, nbins)), 5, .)
+                }
+                out_n = out_n + 1
+                out[out_n, 1] = id[i]
+                out[out_n, 2] = grp[i]
+                out[out_n, 3] = curbin
+                out[out_n, 4] = take
+                out[out_n, 5] = welfare[i]
+
+                remaining = remaining - take
+                curweight = curweight + take
+
+                if (curweight >= binsize - tolerance) {
+                    curbin = curbin + 1
+                    curweight = 0
+                }
+            }
+
+            last_id = id[i]
+            last_welfare = welfare[i]
+            last_remaining = remaining
+        }
+
+        if (curbin > nbins & last_remaining > 0) {
+            if (out_n >= rows(out)) {
+                out = out \ J(max((n, nbins)), 5, .)
+            }
+            out_n = out_n + 1
+            out[out_n, 1] = last_id
+            out[out_n, 2] = grp[stop]
+            out[out_n, 3] = nbins
+            out[out_n, 4] = last_remaining
+            out[out_n, 5] = last_welfare
+        }
+    }
+
+    stata("drop _all")
+    st_addobs(out_n)
+    st_addvar("double", "id")
+    st_addvar("long", grpvar)
+    st_addvar("long", "bin")
+    st_addvar("double", "weight")
+    st_addvar("double", "welfare")
+
+    if (out_n > 0) {
+        st_store(., "id", out[|1, 1 \ out_n, 1|])
+        st_store(., grpvar, out[|1, 2 \ out_n, 2|])
+        st_store(., "bin", out[|1, 3 \ out_n, 3|])
+        st_store(., "weight", out[|1, 4 \ out_n, 4|])
+        st_store(., "welfare", out[|1, 5 \ out_n, 5|])
+    }
+}
+end
+
+
+use us14ih ,clear
+	
+local country_code  = upper(iso3[1])
+local surveyid_year = year[1]
+local wave          = wave[1]
+
+// Currency: second "-" segment of label (e.g. "USD-USD-A" -> "USD")
+// mirrors R: tstrsplit(..., "-", keep=1:2)[[2]]
+decode currency, gen(curr_str)
+split curr_str, parse(-)
+local currency = curr_str2[1]
+if ("`currency'" == "") local currency = curr_str1[1]
+drop curr_str*
+
+// Welfare and weight (matching R: welfare=dhi/nhhmem, weight=hpopwgt*nhhmem)
+keep hid dhi hpopwgt nhhmem
+gen double weight  = hpopwgt * nhhmem
+gen double welfare = dhi / nhhmem
+
+// Drop negatives and missing (R: fsubset(welfare >= 0 & !is.na(...)))
+drop if welfare < 0 | missing(welfare) | missing(weight)
+
+// Min/max before binning (added as metadata columns after lorenz_table)
+quietly sum welfare, meanonly
+local min_welfare = r(min)
+local max_welfare = r(max)
+
+// Reporting level is always national for LIS household data
+gen str8 reporting_level = "national"
+		
+local varlist welfare
+local weight weight
+local reporting reporting_level
+local nq 1000
+local tolerance 1e-6
+
+
+tempvar welfare_var weight_var id_var grp_var
+tempfile group_map
+	
+gen byte touse = 1
+quietly keep if touse
+keep `varlist' `weight' `reporting'
+
+    quietly drop if missing(`varlist') | missing(`weight')
+
+    quietly count
+    if (r(N) == 0) {
+        di as err "no nonmissing observations remain after filtering"
+        exit 2000
+    }
+
+    quietly count if `weight' < 0
+    if (r(N) > 0) {
+        di as err "weight() must be nonnegative"
+        exit 459
+    }
+
+    tempvar report_id wt_welfare tot_pop tot_wlf
+    tempfile national_copy
+
+    egen long `report_id' = group(`reporting')
+    quietly summarize `report_id', meanonly
+    local no_dl = r(max)
+    drop `report_id'
+
+    local report_type : type `reporting'
+    if ("`report_type'" != "strL" & substr("`report_type'", 1, 3) == "str") {
+        local report_len = real(substr("`report_type'", 4, .))
+        if (`report_len' < 8) {
+            recast str8 `reporting'
+        }
+    }
+
+    if (`no_dl' > 1) {
+        preserve
+            replace `reporting' = "national"
+            save `national_copy'
+        restore
+        append using `national_copy'
+    }
+	
+local nbins 1000
+
+  local keepvars `varlist' `weight'
+    if ("`id'" != "") {
+        local keepvars `keepvars' `id'
+    }
+    if ("`reporting'" != "") {
+        local keepvars `keepvars' `reporting'
+    }
+    keep `keepvars'
+
+    quietly drop if missing(`varlist') | missing(`weight')
+
+    quietly count
+    if (r(N) == 0) {
+        di as err "no nonmissing observations remain after filtering"
+        exit 2000
+    }
+
+    quietly count if `weight' < 0
+    if (r(N) > 0) {
+        di as err "weight() must be nonnegative"
+        exit 459
+    }
+
+    generate double `welfare_var' = `varlist'
+    generate double `weight_var' = `weight'
+
+    if ("`id'" == "") {
+        generate double `id_var' = _n
+    }
+    else {
+        generate double `id_var' = `id'
+    }
+
+    if ("`reporting'" == "") {
+        generate long `grp_var' = 1
+    }
+    else {
+        egen long `grp_var' = group(`reporting')
+        preserve
+            keep `grp_var' `reporting'
+            duplicates drop
+            save `group_map'
+        restore
+    }
+
+    sort `grp_var' `welfare_var' `id_var', stable
+	
+   mata: __lis_new_bins("`id_var'", "`welfare_var'", "`weight_var'", "`grp_var'", `nbins', `tolerance')
+	
+	 if ("`reporting'" != "") {
+        merge m:1 `grp_var' using `group_map', nogen assert(match)
+        order `reporting' id bin weight welfare
+        drop `grp_var'
+        sort `reporting' bin welfare id, stable
+    }
+    else {
+        drop `grp_var'
+        order id bin weight welfare
+        sort bin welfare id, stable
+    }
+
+    generate double `wt_welfare' = welfare * weight
+
+    bysort `reporting': egen double `tot_pop' = total(weight)
+    bysort `reporting': egen double `tot_wlf' = total(`wt_welfare')
+
+    generate double pop_share = weight / `tot_pop'
+    generate double welfare_share = `wt_welfare' / `tot_wlf'
+
+    collapse (sum) pop_share welfare_share pop=weight wt_welfare=`wt_welfare' ///
+        (max) quantile=welfare, by(`reporting' bin)
+
+    generate double avg_welfare = wt_welfare / pop
+    drop wt_welfare
+
+    order `reporting' bin avg_welfare pop_share welfare_share quantile pop
+    sort `reporting' bin, stable
+//     compress
+//
+//     return scalar reporting_levels = `no_dl'
+//     return scalar nq = `nq'
+//     return scalar N = _N
+	
+//----------------test lorenz-----------------------
+
+
+cd "C://WBG//Git repos//Packages//GPID//PIP//LIS_data//01.programs//SampleData//"
+
+// version 16.1
+
+cap mata: mata drop __lis_new_bins()
+mata:
+void __lis_new_bins(
+    string scalar idvar,
+    string scalar welfarevar,
+    string scalar weightvar,
+    string scalar grpvar,
+    real scalar nbins,
+    real scalar tolerance)
+{
+    real matrix X, panel, out
+    real colvector id, welfare, weight, grp
+    real scalar n, groups, maxout, out_n
+    real scalar g, start, stop, i
+    real scalar totalweight, binsize, curbin, curweight
+    real scalar remaining, room, take
+    real scalar last_id, last_welfare, last_remaining
+
+    X = st_data(., (idvar, welfarevar, weightvar, grpvar))
+    n = rows(X)
+
+    if (n == 0) {
+        stata("drop _all")
+        st_addvar("double", "id")
+        st_addvar("long", grpvar)
+        st_addvar("long", "bin")
+        st_addvar("double", "weight")
+        st_addvar("double", "welfare")
+        return
+    }
+
+    id      = X[, 1]
+    welfare = X[, 2]
+    weight  = X[, 3]
+    grp     = X[, 4]
+
+    panel  = panelsetup(grp, 1)
+    groups = rows(panel)
+    maxout = n + groups * (nbins - 1)
+    out    = J(maxout, 5, .)
+    out_n  = 0
+
+    for (g = 1; g <= groups; g++) {
+        start = panel[g, 1]
+        stop  = panel[g, 2]
+
+        totalweight = sum(weight[|start \ stop|])
+        if (totalweight <= 0) {
+            continue
+        }
+
+        binsize   = totalweight / nbins
+        curbin    = 1
+        curweight = 0
+        last_id = .
+        last_welfare = .
+        last_remaining = 0
+
+        for (i = start; i <= stop; i++) {
+            remaining = weight[i]
+
+            if (remaining <= 0) {
+                continue
+            }
+
+            while (remaining > 0 & curbin <= nbins) {
+                room = binsize - curweight
+
+                if (abs(room) < tolerance) {
+                    curbin = curbin + 1
+                    curweight = 0
+                    continue
+                }
+
+                take = min((remaining, room))
+
+                if (out_n >= rows(out)) {
+                    out = out \ J(max((n, nbins)), 5, .)
+                }
+                out_n = out_n + 1
+                out[out_n, 1] = id[i]
+                out[out_n, 2] = grp[i]
+                out[out_n, 3] = curbin
+                out[out_n, 4] = take
+                out[out_n, 5] = welfare[i]
+
+                remaining = remaining - take
+                curweight = curweight + take
+
+                if (curweight >= binsize - tolerance) {
+                    curbin = curbin + 1
+                    curweight = 0
+                }
+            }
+
+            last_id = id[i]
+            last_welfare = welfare[i]
+            last_remaining = remaining
+        }
+
+        if (curbin > nbins & last_remaining > 0) {
+            if (out_n >= rows(out)) {
+                out = out \ J(max((n, nbins)), 5, .)
+            }
+            out_n = out_n + 1
+            out[out_n, 1] = last_id
+            out[out_n, 2] = grp[stop]
+            out[out_n, 3] = nbins
+            out[out_n, 4] = last_remaining
+            out[out_n, 5] = last_welfare
+        }
+    }
+
+    stata("drop _all")
+    st_addobs(out_n)
+    st_addvar("double", "id")
+    st_addvar("long", grpvar)
+    st_addvar("long", "bin")
+    st_addvar("double", "weight")
+    st_addvar("double", "welfare")
+
+    if (out_n > 0) {
+        st_store(., "id", out[|1, 1 \ out_n, 1|])
+        st_store(., grpvar, out[|1, 2 \ out_n, 2|])
+        st_store(., "bin", out[|1, 3 \ out_n, 3|])
+        st_store(., "weight", out[|1, 4 \ out_n, 4|])
+        st_store(., "welfare", out[|1, 5 \ out_n, 5|])
+    }
+}
+end
+
+cap program drop new_bins
+program define new_bins, rclass
+//     version 16.1
+
+    syntax varname(numeric) [if] [in], Weight(varname) ///
+        [ID(varname) NBINS(integer 100) Tolerance(real 1e-6) Reporting(varname)]
+
+    marksample touse, novarlist
+
+    if (`nbins' <= 0) {
+        di as err "nbins() must be a positive integer"
+        exit 198
+    }
+
+    if (`tolerance' < 0) {
+        di as err "tolerance() must be nonnegative"
+        exit 198
+    }
+
+    tempvar welfare_var weight_var id_var grp_var
+    tempfile group_map
+
+    quietly keep if `touse'
+
+    local keepvars `varlist' `weight'
+    if ("`id'" != "") {
+        local keepvars `keepvars' `id'
+    }
+    if ("`reporting'" != "") {
+        local keepvars `keepvars' `reporting'
+    }
+    keep `keepvars'
+
+    quietly drop if missing(`varlist') | missing(`weight')
+
+    quietly count
+    if (r(N) == 0) {
+        di as err "no nonmissing observations remain after filtering"
+        exit 2000
+    }
+
+    quietly count if `weight' < 0
+    if (r(N) > 0) {
+        di as err "weight() must be nonnegative"
+        exit 459
+    }
+
+    generate double `welfare_var' = `varlist'
+    generate double `weight_var' = `weight'
+
+    if ("`id'" == "") {
+        generate double `id_var' = _n
+    }
+    else {
+        generate double `id_var' = `id'
+    }
+
+    if ("`reporting'" == "") {
+        generate long `grp_var' = 1
+    }
+    else {
+        egen long `grp_var' = group(`reporting')
+        preserve
+            keep `grp_var' `reporting'
+            duplicates drop
+            save `group_map'
+        restore
+    }
+
+    sort `grp_var' `welfare_var' `id_var', stable
+
+    mata: __lis_new_bins("`id_var'", "`welfare_var'", "`weight_var'", "`grp_var'", `nbins', `tolerance')
+
+    if ("`reporting'" != "") {
+        merge m:1 `grp_var' using `group_map', nogen assert(match)
+        order `reporting' id bin weight welfare
+        drop `grp_var'
+        sort `reporting' bin welfare id, stable
+    }
+    else {
+        drop `grp_var'
+        order id bin weight welfare
+        sort bin welfare id, stable
+    }
+
+    compress
+
+    return scalar N = _N
+    return scalar nbins = `nbins'
+end
+
+
+cap program drop lorenz_table
+program define lorenz_table, rclass
+//     version 16.1
+
+    syntax varname(numeric) [if] [in], weight(varname) reporting(varname) ///
+        [nq(integer 100) tolerance(real 1e-6)]
+
+    marksample touse, novarlist
+
+    capture confirm string variable `reporting'
+    if (_rc) {
+        di as err "reporting() must be a string variable"
+        exit 109
+    }
+
+    if (`nq' <= 0) {
+        di as err "nq() must be a positive integer"
+        exit 198
+    }
+
+    if (`tolerance' < 0) {
+        di as err "tolerance() must be nonnegative"
+        exit 198
+    }
+
+    quietly keep if `touse'
+    keep `varlist' `weight' `reporting'
+    quietly drop if missing(`varlist') | missing(`weight')
+
+    quietly count
+    if (r(N) == 0) {
+        di as err "no nonmissing observations remain after filtering"
+        exit 2000
+    }
+
+    quietly count if `weight' < 0
+    if (r(N) > 0) {
+        di as err "weight() must be nonnegative"
+        exit 459
+    }
+
+    tempvar report_id wt_welfare tot_pop tot_wlf
+    tempfile national_copy
+
+    egen long `report_id' = group(`reporting')
+    quietly summarize `report_id', meanonly
+    local no_dl = r(max)
+    drop `report_id'
+
+    local report_type : type `reporting'
+    if ("`report_type'" != "strL" & substr("`report_type'", 1, 3) == "str") {
+        local report_len = real(substr("`report_type'", 4, .))
+        if (`report_len' < 8) {
+            recast str8 `reporting'
+        }
+    }
+
+    if (`no_dl' > 1) {
+        preserve
+            replace `reporting' = "national"
+            save `national_copy'
+        restore
+        append using `national_copy'
+    }
+
+    new_bins `varlist', weight(`weight') nbins(`nq') tolerance(`tolerance') reporting(`reporting')
+
+    generate double `wt_welfare' = welfare * weight
+
+    bysort `reporting': egen double `tot_pop' = total(weight)
+    bysort `reporting': egen double `tot_wlf' = total(`wt_welfare')
+
+    generate double pop_share = weight / `tot_pop'
+    generate double welfare_share = `wt_welfare' / `tot_wlf'
+
+    collapse (sum) pop_share welfare_share pop=weight wt_welfare=`wt_welfare' ///
+        (max) quantile=welfare, by(`reporting' bin)
+
+    generate double avg_welfare = wt_welfare / pop
+    drop wt_welfare
+
+    order `reporting' bin avg_welfare pop_share welfare_share quantile pop
+    sort `reporting' bin, stable
+    compress
+
+    return scalar reporting_levels = `no_dl'
+    return scalar nq = `nq'
+    return scalar N = _N
+end
+
+use us14ih ,clear
+
+local country_code  = upper(iso3[1])
+local surveyid_year = year[1]
+local wave          = wave[1]
+
+// Currency: second "-" segment of label (e.g. "USD-USD-A" -> "USD")
+// mirrors R: tstrsplit(..., "-", keep=1:2)[[2]]
+decode currency, gen(curr_str)
+split curr_str, parse(-)
+local currency = curr_str2[1]
+if ("`currency'" == "") local currency = curr_str1[1]
+drop curr_str*
+
+// Welfare and weight (matching R: welfare=dhi/nhhmem, weight=hpopwgt*nhhmem)
+keep hid dhi hpopwgt nhhmem
+gen double weight  = hpopwgt * nhhmem
+gen double welfare = dhi / nhhmem
+
+// Drop negatives and missing (R: fsubset(welfare >= 0 & !is.na(...)))
+drop if welfare < 0 | missing(welfare) | missing(weight)
+
+// Min/max before binning (added as metadata columns after lorenz_table)
+quietly sum welfare, meanonly
+local min_welfare = r(min)
+local max_welfare = r(max)
+
+// Reporting level is always national for LIS household data
+gen str8 reporting_level = "national"
+
+// Compute 1000-bin Lorenz table (replaces dataset in memory)
+lorenz_table welfare, weight(weight) reporting(reporting_level) nq(1000)

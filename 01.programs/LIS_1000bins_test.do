@@ -27,7 +27,138 @@ Notes:
 
 cd "C://WBG//Git repos//Packages//GPID//PIP//LIS_data//01.programs//SampleData//"
 
-version 16.1
+// version 16.1
+
+cap mata: mata drop __lis_new_bins()
+mata:
+void __lis_new_bins(
+    string scalar idvar,
+    string scalar welfarevar,
+    string scalar weightvar,
+    string scalar grpvar,
+    real scalar nbins,
+    real scalar tolerance)
+{
+    real matrix X, panel, out
+    real colvector id, welfare, weight, grp
+    real scalar n, groups, maxout, out_n
+    real scalar g, start, stop, i
+    real scalar totalweight, binsize, curbin, curweight
+    real scalar remaining, room, take
+    real scalar last_id, last_welfare, last_remaining
+
+    X = st_data(., (idvar, welfarevar, weightvar, grpvar))
+    n = rows(X)
+
+    if (n == 0) {
+        stata("drop _all")
+        st_addvar("double", "id")
+        st_addvar("long", grpvar)
+        st_addvar("long", "bin")
+        st_addvar("double", "weight")
+        st_addvar("double", "welfare")
+        return
+    }
+
+    id      = X[, 1]
+    welfare = X[, 2]
+    weight  = X[, 3]
+    grp     = X[, 4]
+
+    panel  = panelsetup(grp, 1)
+    groups = rows(panel)
+    maxout = n + groups * (nbins - 1)
+    out    = J(maxout, 5, .)
+    out_n  = 0
+
+    for (g = 1; g <= groups; g++) {
+        start = panel[g, 1]
+        stop  = panel[g, 2]
+
+        totalweight = sum(weight[|start \ stop|])
+        if (totalweight <= 0) {
+            continue
+        }
+
+        binsize   = totalweight / nbins
+        curbin    = 1
+        curweight = 0
+        last_id = .
+        last_welfare = .
+        last_remaining = 0
+
+        for (i = start; i <= stop; i++) {
+            remaining = weight[i]
+
+            if (remaining <= 0) {
+                continue
+            }
+
+            while (remaining > 0 & curbin <= nbins) {
+                room = binsize - curweight
+
+                if (abs(room) < tolerance) {
+                    curbin = curbin + 1
+                    curweight = 0
+                    continue
+                }
+
+                take = min((remaining, room))
+
+                if (out_n >= rows(out)) {
+                    out = out \ J(max((n, nbins)), 5, .)
+                }
+                out_n = out_n + 1
+                out[out_n, 1] = id[i]
+                out[out_n, 2] = grp[i]
+                out[out_n, 3] = curbin
+                out[out_n, 4] = take
+                out[out_n, 5] = welfare[i]
+
+                remaining = remaining - take
+                curweight = curweight + take
+
+                if (curweight >= binsize - tolerance) {
+                    curbin = curbin + 1
+                    curweight = 0
+                }
+            }
+
+            last_id = id[i]
+            last_welfare = welfare[i]
+            last_remaining = remaining
+        }
+
+        if (curbin > nbins & last_remaining > 0) {
+            if (out_n >= rows(out)) {
+                out = out \ J(max((n, nbins)), 5, .)
+            }
+            out_n = out_n + 1
+            out[out_n, 1] = last_id
+            out[out_n, 2] = grp[stop]
+            out[out_n, 3] = nbins
+            out[out_n, 4] = last_remaining
+            out[out_n, 5] = last_welfare
+        }
+    }
+
+    stata("drop _all")
+    st_addobs(out_n)
+    st_addvar("double", "id")
+    st_addvar("long", grpvar)
+    st_addvar("long", "bin")
+    st_addvar("double", "weight")
+    st_addvar("double", "welfare")
+
+    if (out_n > 0) {
+        st_store(., "id", out[|1, 1 \ out_n, 1|])
+        st_store(., grpvar, out[|1, 2 \ out_n, 2|])
+        st_store(., "bin", out[|1, 3 \ out_n, 3|])
+        st_store(., "weight", out[|1, 4 \ out_n, 4|])
+        st_store(., "welfare", out[|1, 5 \ out_n, 5|])
+    }
+}
+end
 
 cap program drop new_bins
 program define new_bins, rclass
@@ -212,124 +343,6 @@ program define lorenz_table, rclass
 end
 
 
-cap mata: mata drop __lis_new_bins()
-mata:
-void __lis_new_bins(
-    string scalar idvar,
-    string scalar welfarevar,
-    string scalar weightvar,
-    string scalar grpvar,
-    real scalar nbins,
-    real scalar tolerance)
-{
-    real matrix X, panel, out
-    real colvector id, welfare, weight, grp
-    real scalar n, groups, maxout, out_n
-    real scalar g, start, stop, i
-    real scalar totalweight, binsize, curbin, curweight
-    real scalar remaining, room, take
-
-    X = st_data(., (idvar, welfarevar, weightvar, grpvar))
-    n = rows(X)
-
-    if (n == 0) {
-        stata("drop _all")
-        st_addvar("double", "id")
-        st_addvar("long", grpvar)
-        st_addvar("long", "bin")
-        st_addvar("double", "weight")
-        st_addvar("double", "welfare")
-        return
-    }
-
-    id      = X[, 1]
-    welfare = X[, 2]
-    weight  = X[, 3]
-    grp     = X[, 4]
-
-    panel  = panelsetup(grp, 1)
-    groups = rows(panel)
-    maxout = n + groups * (nbins - 1)
-    out    = J(maxout, 5, .)
-    out_n  = 0
-
-    for (g = 1; g <= groups; g++) {
-        start = panel[g, 1]
-        stop  = panel[g, 2]
-
-        totalweight = sum(weight[|start \ stop|])
-        if (totalweight <= 0) {
-            continue
-        }
-
-        binsize   = totalweight / nbins
-        curbin    = 1
-        curweight = 0
-
-        for (i = start; i <= stop; i++) {
-            remaining = weight[i]
-
-            if (remaining <= 0) {
-                continue
-            }
-
-            while (remaining > 0 & curbin <= nbins) {
-                room = binsize - curweight
-
-                if (abs(room) < tolerance) {
-                    curbin = curbin + 1
-                    curweight = 0
-                    continue
-                }
-
-                take = min((remaining, room))
-
-                out_n = out_n + 1
-                out[out_n, 1] = id[i]
-                out[out_n, 2] = grp[i]
-                out[out_n, 3] = curbin
-                out[out_n, 4] = take
-                out[out_n, 5] = welfare[i]
-
-                remaining = remaining - take
-                curweight = curweight + take
-
-                if (curweight >= binsize - tolerance) {
-                    curbin = curbin + 1
-                    curweight = 0
-                }
-            }
-
-            if (curbin > nbins & remaining > 0) {
-                out_n = out_n + 1
-                out[out_n, 1] = id[i]
-                out[out_n, 2] = grp[i]
-                out[out_n, 3] = nbins
-                out[out_n, 4] = remaining
-                out[out_n, 5] = welfare[i]
-            }
-        }
-    }
-
-    stata("drop _all")
-    st_addobs(out_n)
-    st_addvar("double", "id")
-    st_addvar("long", grpvar)
-    st_addvar("long", "bin")
-    st_addvar("double", "weight")
-    st_addvar("double", "welfare")
-
-    if (out_n > 0) {
-        st_store(., "id", out[|1, 1 \ out_n, 1|])
-        st_store(., grpvar, out[|1, 2 \ out_n, 2|])
-        st_store(., "bin", out[|1, 3 \ out_n, 3|])
-        st_store(., "weight", out[|1, 4 \ out_n, 4|])
-        st_store(., "welfare", out[|1, 5 \ out_n, 5|])
-    }
-}
-end
-
-
 /*===========================================================================
   2: LIS caller
   Mirrors LIS_bins_data() and the survey loop in 01.LIS_1000bins.R.
@@ -454,25 +467,26 @@ foreach x of local surveys {
 	local ++i
 }
 
+
 /*---------- 2c. Save result -----------------------------------------------*/
 
-// if `i' > 1 {
-// 	use `datasofar', clear
-//
-// 	local today = c(current_date)
-// 	local today: subinstr local today " " "_", all
-//
-// 	// Save as dta
-// 	save "wb_1000bin_append_`today'.dta", replace
-//
-// 	// Save as CSV (equivalent to readr::write_csv in R):
-// 	export delimited using "wb_1000bin_append_`today'.csv", replace
-// }
-// else {
-// 	di as err "No surveys were successfully processed."
-// }
+if `i' > 1 {
+	use `datasofar', clear
 
-// exit
+	local today = c(current_date)
+	local today: subinstr local today " " "_", all
+
+	// Save as dta
+	save "wb_1000bin_append_`today'.dta", replace
+
+	// Save as CSV (equivalent to readr::write_csv in R):
+// 	export delimited using "wb_1000bin_append_`today'.csv", replace
+}
+else {
+	di as err "No surveys were successfully processed."
+}
+
+exit
 /* End of do-file */
 
 // ><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><
