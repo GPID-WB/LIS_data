@@ -1,4 +1,10 @@
 
+//----------------test without lorenz program-----------------------
+
+clear all 
+set more off
+
+cd "C://WBG//Git repos//Packages//GPID//PIP//LIS_data//01.programs//SampleData//"
 
 cap mata: mata drop __lis_new_bins()
 mata:
@@ -199,10 +205,12 @@ keep `varlist' `weight' `reporting'
     drop `report_id'
 
     local report_type : type `reporting'
-    if ("`report_type'" != "strL" & substr("`report_type'", 1, 3) == "str") {
-        local report_len = real(substr("`report_type'", 4, .))
-        if (`report_len' < 8) {
-            recast str8 `reporting'
+    if ("`report_type'" != "strL") {
+        if (substr("`report_type'", 1, 3) == "str") {
+            local report_len = real(substr("`report_type'", 4, .))
+            if (`report_len' < 8) {
+                recast str8 `reporting'
+            }
         }
     }
 
@@ -299,8 +307,10 @@ local nbins 1000
 //     return scalar nq = `nq'
 //     return scalar N = _N
 	
-//----------------test lorenz-----------------------
+//----------------test lorenz program-----------------------
 
+clear all 
+set more off
 
 cd "C://WBG//Git repos//Packages//GPID//PIP//LIS_data//01.programs//SampleData//"
 
@@ -441,7 +451,7 @@ cap program drop new_bins
 program define new_bins, rclass
 //     version 16.1
 
-    syntax varname(numeric) [if] [in], Weight(varname) ///
+    syntax varname(numeric) [if] [in], Wvar(varname) ///
         [ID(varname) NBINS(integer 100) Tolerance(real 1e-6) Reporting(varname)]
 
     marksample touse, novarlist
@@ -461,7 +471,7 @@ program define new_bins, rclass
 
     quietly keep if `touse'
 
-    local keepvars `varlist' `weight'
+    local keepvars `varlist' `wvar'
     if ("`id'" != "") {
         local keepvars `keepvars' `id'
     }
@@ -470,7 +480,7 @@ program define new_bins, rclass
     }
     keep `keepvars'
 
-    quietly drop if missing(`varlist') | missing(`weight')
+    quietly drop if missing(`varlist') | missing(`wvar')
 
     quietly count
     if (r(N) == 0) {
@@ -478,14 +488,14 @@ program define new_bins, rclass
         exit 2000
     }
 
-    quietly count if `weight' < 0
+    quietly count if `wvar' < 0
     if (r(N) > 0) {
         di as err "weight() must be nonnegative"
         exit 459
     }
 
     generate double `welfare_var' = `varlist'
-    generate double `weight_var' = `weight'
+    generate double `weight_var' = `wvar'
 
     if ("`id'" == "") {
         generate double `id_var' = _n
@@ -533,7 +543,7 @@ cap program drop lorenz_table
 program define lorenz_table, rclass
 //     version 16.1
 
-    syntax varname(numeric) [if] [in], weight(varname) reporting(varname) ///
+    syntax varname(numeric) [if] [in], wvar(varname) reporting(varname) ///
         [nq(integer 100) tolerance(real 1e-6)]
 
     marksample touse, novarlist
@@ -555,8 +565,8 @@ program define lorenz_table, rclass
     }
 
     quietly keep if `touse'
-    keep `varlist' `weight' `reporting'
-    quietly drop if missing(`varlist') | missing(`weight')
+    keep `varlist' `wvar' `reporting'
+    quietly drop if missing(`varlist') | missing(`wvar')
 
     quietly count
     if (r(N) == 0) {
@@ -564,7 +574,7 @@ program define lorenz_table, rclass
         exit 2000
     }
 
-    quietly count if `weight' < 0
+    quietly count if `wvar' < 0
     if (r(N) > 0) {
         di as err "weight() must be nonnegative"
         exit 459
@@ -579,10 +589,12 @@ program define lorenz_table, rclass
     drop `report_id'
 
     local report_type : type `reporting'
-    if ("`report_type'" != "strL" & substr("`report_type'", 1, 3) == "str") {
-        local report_len = real(substr("`report_type'", 4, .))
-        if (`report_len' < 8) {
-            recast str8 `reporting'
+    if ("`report_type'" != "strL") {
+        if (substr("`report_type'", 1, 3) == "str") {
+            local report_len = real(substr("`report_type'", 4, .))
+            if (`report_len' < 8) {
+                recast str8 `reporting'
+            }
         }
     }
 
@@ -594,7 +606,7 @@ program define lorenz_table, rclass
         append using `national_copy'
     }
 
-    new_bins `varlist', weight(`weight') nbins(`nq') tolerance(`tolerance') reporting(`reporting')
+    new_bins `varlist', wvar(`wvar') nbins(`nq') tolerance(`tolerance') reporting(`reporting')
 
     generate double `wt_welfare' = welfare * weight
 
@@ -650,4 +662,4 @@ local max_welfare = r(max)
 gen str8 reporting_level = "national"
 
 // Compute 1000-bin Lorenz table (replaces dataset in memory)
-lorenz_table welfare, weight(weight) reporting(reporting_level) nq(1000)
+lorenz_table welfare, wvar(weight) reporting(reporting_level) nq(1000)
