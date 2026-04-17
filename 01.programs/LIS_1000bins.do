@@ -10,7 +10,7 @@ Usage:
     do "01.programs/LIS_1000bins.do"
 
     * Dataset in memory must contain welfare, weight, reporting_level
-    lorenz_table welfare, weight(weight) reporting(reporting_level) nq(1000)
+    lorenz_table welfare, wvar(weight) reporting(reporting_level) nq(1000)
 
 Result:
     The dataset in memory is replaced with a Lorenz-style table containing:
@@ -26,106 +26,23 @@ Notes:
 
 version 16.1
 
-cap program drop new_bins
-program define new_bins, rclass
-    version 16.1
-
-    syntax varname(numeric) [if] [in], Weight(varname numeric) ///
-        [ID(varname numeric) NBINS(integer 100) Tolerance(real 1e-6) Reporting(varname)]
-
-    marksample touse, novarlist
-
-    if (`nbins' <= 0) {
-        di as err "nbins() must be a positive integer"
-        exit 198
-    }
-
-    if (`tolerance' < 0) {
-        di as err "tolerance() must be nonnegative"
-        exit 198
-    }
-
-    tempvar welfare_var weight_var id_var grp_var
-    tempfile group_map
-
-    quietly keep if `touse'
-
-    local keepvars `varlist' `weight'
-    if ("`id'" != "") {
-        local keepvars `keepvars' `id'
-    }
-    if ("`reporting'" != "") {
-        local keepvars `keepvars' `reporting'
-    }
-    keep `keepvars'
-
-    quietly drop if missing(`varlist') | missing(`weight')
-
-    quietly count
-    if (r(N) == 0) {
-        di as err "no nonmissing observations remain after filtering"
-        exit 2000
-    }
-
-    quietly count if `weight' < 0
-    if (r(N) > 0) {
-        di as err "weight() must be nonnegative"
-        exit 459
-    }
-
-    generate double `welfare_var' = `varlist'
-    generate double `weight_var' = `weight'
-
-    if ("`id'" == "") {
-        generate double `id_var' = _n
-    }
-    else {
-        generate double `id_var' = `id'
-    }
-
-    if ("`reporting'" == "") {
-        generate long `grp_var' = 1
-    }
-    else {
-        egen long `grp_var' = group(`reporting')
-        preserve
-            keep `grp_var' `reporting'
-            duplicates drop
-            save `group_map'
-        restore
-    }
-
-    sort `grp_var' `welfare_var' `id_var', stable
-
-    mata: __lis_new_bins("`id_var'", "`welfare_var'", "`weight_var'", "`grp_var'", `nbins', `tolerance')
-
-    if ("`reporting'" != "") {
-        merge m:1 `grp_var' using `group_map', nogen assert(match)
-        order `reporting' id bin weight welfare
-        drop `grp_var'
-        sort `reporting' bin welfare id, stable
-    }
-    else {
-        drop `grp_var'
-        order id bin weight welfare
-        sort bin welfare id, stable
-    }
-
-    compress
-
-    return scalar N = _N
-    return scalar nbins = `nbins'
-end
-
-
 cap program drop lorenz_table
+cap program drop _lorenz_table_new_bins
+cap mata: mata drop __lorenz_table_new_bins()
+
 program define lorenz_table, rclass
     version 16.1
 
-    syntax varname(numeric) [if] [in], Weight(varname numeric) Reporting(varname) ///
+    syntax varname(numeric) [if] [in], Wvar(varname) Reporting(varname) ///
         [NQ(integer 100) Tolerance(real 1e-6)]
 
     marksample touse, novarlist
+
+    capture confirm numeric variable `wvar'
+    if (_rc) {
+        di as err "wvar() must be a numeric variable"
+        exit 109
+    }
 
     capture confirm string variable `reporting'
     if (_rc) {
@@ -144,8 +61,8 @@ program define lorenz_table, rclass
     }
 
     quietly keep if `touse'
-    keep `varlist' `weight' `reporting'
-    quietly drop if missing(`varlist') | missing(`weight')
+    keep `varlist' `wvar' `reporting'
+    quietly drop if missing(`varlist') | missing(`wvar')
 
     quietly count
     if (r(N) == 0) {
@@ -153,9 +70,9 @@ program define lorenz_table, rclass
         exit 2000
     }
 
-    quietly count if `weight' < 0
+    quietly count if `wvar' < 0
     if (r(N) > 0) {
-        di as err "weight() must be nonnegative"
+        di as err "wvar() must be nonnegative"
         exit 459
     }
 
@@ -169,9 +86,11 @@ program define lorenz_table, rclass
 
     local report_type : type `reporting'
     if ("`report_type'" != "strL") {
-        local report_len = real(substr("`report_type'", 4, .))
-        if (`report_len' < 8) {
-            recast str8 `reporting'
+        if (substr("`report_type'", 1, 3) == "str") {
+            local report_len = real(substr("`report_type'", 4, .))
+            if (`report_len' < 8) {
+                recast str8 `reporting'
+            }
         }
     }
 
@@ -183,7 +102,7 @@ program define lorenz_table, rclass
         append using `national_copy'
     }
 
-    new_bins `varlist', weight(`weight') nbins(`nq') tolerance(`tolerance') reporting(`reporting')
+    _lorenz_table_new_bins `varlist', wvar(`wvar') nbins(`nq') tolerance(`tolerance') reporting(`reporting')
 
     generate double `wt_welfare' = welfare * weight
 
@@ -209,9 +128,113 @@ program define lorenz_table, rclass
 end
 
 
-cap mata: mata drop __lis_new_bins()
+program define _lorenz_table_new_bins, rclass
+    version 16.1
+
+    syntax varname(numeric) [if] [in], Wvar(varname) ///
+        [ID(varname) NBINS(integer 100) Tolerance(real 1e-6) Reporting(varname)]
+
+    marksample touse, novarlist
+
+    capture confirm numeric variable `wvar'
+    if (_rc) {
+        di as err "wvar() must be a numeric variable"
+        exit 109
+    }
+
+    if ("`id'" != "") {
+        capture confirm numeric variable `id'
+        if (_rc) {
+            di as err "id() must be a numeric variable"
+            exit 109
+        }
+    }
+
+    if (`nbins' <= 0) {
+        di as err "nbins() must be a positive integer"
+        exit 198
+    }
+
+    if (`tolerance' < 0) {
+        di as err "tolerance() must be nonnegative"
+        exit 198
+    }
+
+    tempvar welfare_var weight_var id_var grp_var
+    tempfile group_map
+
+    quietly keep if `touse'
+
+    local keepvars `varlist' `wvar'
+    if ("`id'" != "") {
+        local keepvars `keepvars' `id'
+    }
+    if ("`reporting'" != "") {
+        local keepvars `keepvars' `reporting'
+    }
+    keep `keepvars'
+
+    quietly drop if missing(`varlist') | missing(`wvar')
+
+    quietly count
+    if (r(N) == 0) {
+        di as err "no nonmissing observations remain after filtering"
+        exit 2000
+    }
+
+    quietly count if `wvar' < 0
+    if (r(N) > 0) {
+        di as err "wvar() must be nonnegative"
+        exit 459
+    }
+
+    generate double `welfare_var' = `varlist'
+    generate double `weight_var' = `wvar'
+
+    if ("`id'" == "") {
+        generate double `id_var' = _n
+    }
+    else {
+        generate double `id_var' = `id'
+    }
+
+    if ("`reporting'" == "") {
+        generate long `grp_var' = 1
+    }
+    else {
+        egen long `grp_var' = group(`reporting')
+        preserve
+            keep `grp_var' `reporting'
+            duplicates drop
+            save `group_map'
+        restore
+    }
+
+    sort `grp_var' `welfare_var' `id_var', stable
+
+    mata: __lorenz_table_new_bins("`id_var'", "`welfare_var'", "`weight_var'", "`grp_var'", `nbins', `tolerance')
+
+    if ("`reporting'" != "") {
+        merge m:1 `grp_var' using `group_map', nogen assert(match)
+        order `reporting' id bin weight welfare
+        drop `grp_var'
+        sort `reporting' bin welfare id, stable
+    }
+    else {
+        drop `grp_var'
+        order id bin weight welfare
+        sort bin welfare id, stable
+    }
+
+    compress
+
+    return scalar N = _N
+    return scalar nbins = `nbins'
+end
+
+
 mata:
-void __lis_new_bins(
+void __lorenz_table_new_bins(
     string scalar idvar,
     string scalar welfarevar,
     string scalar weightvar,
@@ -225,6 +248,7 @@ void __lis_new_bins(
     real scalar g, start, stop, i
     real scalar totalweight, binsize, curbin, curweight
     real scalar remaining, room, take
+    real scalar last_id, last_welfare, last_remaining
 
     X = st_data(., (idvar, welfarevar, weightvar, grpvar))
     n = rows(X)
@@ -262,6 +286,9 @@ void __lis_new_bins(
         binsize   = totalweight / nbins
         curbin    = 1
         curweight = 0
+        last_id = .
+        last_welfare = .
+        last_remaining = 0
 
         for (i = start; i <= stop; i++) {
             remaining = weight[i]
@@ -281,6 +308,9 @@ void __lis_new_bins(
 
                 take = min((remaining, room))
 
+                if (out_n >= rows(out)) {
+                    out = out \ J(max((n, nbins)), 5, .)
+                }
                 out_n = out_n + 1
                 out[out_n, 1] = id[i]
                 out[out_n, 2] = grp[i]
@@ -297,14 +327,21 @@ void __lis_new_bins(
                 }
             }
 
-            if (curbin > nbins & remaining > 0) {
-                out_n = out_n + 1
-                out[out_n, 1] = id[i]
-                out[out_n, 2] = grp[i]
-                out[out_n, 3] = nbins
-                out[out_n, 4] = remaining
-                out[out_n, 5] = welfare[i]
+            last_id = id[i]
+            last_welfare = welfare[i]
+            last_remaining = remaining
+        }
+
+        if (curbin > nbins & last_remaining > 0) {
+            if (out_n >= rows(out)) {
+                out = out \ J(max((n, nbins)), 5, .)
             }
+            out_n = out_n + 1
+            out[out_n, 1] = last_id
+            out[out_n, 2] = grp[stop]
+            out[out_n, 3] = nbins
+            out[out_n, 4] = last_remaining
+            out[out_n, 5] = last_welfare
         }
     }
 
@@ -387,8 +424,8 @@ foreach x of local surveys {
 		// mirrors R: tstrsplit(..., "-", keep=1:2)[[2]]
 		decode currency, gen(curr_str)
 		split curr_str, parse(-)
-		local currency = curr_str2[1]
-		if ("`currency'" == "") local currency = curr_str1[1]
+		local currency = strtrim(curr_str2[1])
+		if ("`currency'" == "") local currency = strtrim(curr_str1[1])
 		drop curr_str*
 
 		// Welfare and weight (matching R: welfare=dhi/nhhmem, weight=hpopwgt*nhhmem)
@@ -408,19 +445,19 @@ foreach x of local surveys {
 		gen str8 reporting_level = "national"
 
 		// Compute 1000-bin Lorenz table (replaces dataset in memory)
-		lorenz_table welfare, weight(weight) reporting(reporting_level) nq(1000)
+		lorenz_table welfare, wvar(weight) reporting(reporting_level) nq(1000)
 
 		// Attach survey metadata
 		gen str3   country_code  = "`country_code'"
 		gen int    surveyid_year = `surveyid_year'
-		gen str4   wave          = "`wave'"
-		gen str10  currency      = "`currency'"
+		gen int    wave          = `wave'
+		gen str20  currency      = "`currency'"
 		gen double min_welfare   = `min_welfare'
 		gen double max_welfare   = `max_welfare'
 
 		order reporting_level bin avg_welfare pop_share welfare_share ///
 		      quantile pop country_code surveyid_year wave            ///
-		      currency min_welfare max_welfare
+		      min_welfare max_welfare currency
 	}
 	if (_rc) {
 		noi di as txt "  Skipping `x' (rc=`_rc')"
@@ -464,7 +501,9 @@ exit
 
 ><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><
 Notes:
-1. lorenz_table and new_bins are defined in Section 1 (program defs + Mata).
+1. lorenz_table and _lorenz_table_new_bins are defined in Section 1 (program defs + Mata).
+   The wvar() option is used instead of weight() to avoid Stata's reserved
+   option name conflict in program syntax declarations.
 2. Section 2 mirrors 01.LIS_1000bins.R exactly:
    - welfare  = dhi / nhhmem  (same as R: dhi/nhhmem)
    - weight   = hpopwgt * nhhmem  (same as R: hpopwgt*nhhmem)
