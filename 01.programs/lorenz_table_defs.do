@@ -7,14 +7,14 @@ cap mata: mata drop __lorenz_table_new_bins()
 program define lorenz_table, rclass
     version 16.1
 
-    syntax varname(numeric) [if] [in], Weight(varname) Reporting(varname) ///
+    syntax varname(numeric) [if] [in], Wvar(varname) Reporting(varname) ///
         [NQ(integer 100) Tolerance(real 1e-6)]
 
     marksample touse, novarlist
 
-    capture confirm numeric variable `weight'
+    capture confirm numeric variable `wvar'
     if (_rc) {
-        di as err "weight() must be a numeric variable"
+        di as err "wvar() must be a numeric variable"
         exit 109
     }
 
@@ -35,8 +35,8 @@ program define lorenz_table, rclass
     }
 
     quietly keep if `touse'
-    keep `varlist' `weight' `reporting'
-    quietly drop if missing(`varlist') | missing(`weight')
+    keep `varlist' `wvar' `reporting'
+    quietly drop if missing(`varlist') | missing(`wvar')
 
     quietly count
     if (r(N) == 0) {
@@ -44,9 +44,9 @@ program define lorenz_table, rclass
         exit 2000
     }
 
-    quietly count if `weight' < 0
+    quietly count if `wvar' < 0
     if (r(N) > 0) {
-        di as err "weight() must be nonnegative"
+        di as err "wvar() must be nonnegative"
         exit 459
     }
 
@@ -59,10 +59,12 @@ program define lorenz_table, rclass
     drop `report_id'
 
     local report_type : type `reporting'
-    if ("`report_type'" != "strL" & substr("`report_type'", 1, 3) == "str") {
-        local report_len = real(substr("`report_type'", 4, .))
-        if (`report_len' < 8) {
-            recast str8 `reporting'
+    if ("`report_type'" != "strL") {
+        if (substr("`report_type'", 1, 3) == "str") {
+            local report_len = real(substr("`report_type'", 4, .))
+            if (`report_len' < 8) {
+                recast str8 `reporting'
+            }
         }
     }
 
@@ -74,7 +76,7 @@ program define lorenz_table, rclass
         append using `national_copy'
     }
 
-    _lorenz_table_new_bins `varlist', weight(`weight') nbins(`nq') tolerance(`tolerance') reporting(`reporting')
+    _lorenz_table_new_bins `varlist', wvar(`wvar') nbins(`nq') tolerance(`tolerance') reporting(`reporting')
 
     generate double `wt_welfare' = welfare * weight
 
@@ -102,14 +104,14 @@ end
 program define _lorenz_table_new_bins, rclass
     version 16.1
 
-    syntax varname(numeric) [if] [in], Weight(varname) ///
+    syntax varname(numeric) [if] [in], Wvar(varname) ///
         [ID(varname) NBINS(integer 100) Tolerance(real 1e-6) Reporting(varname)]
 
     marksample touse, novarlist
 
-    capture confirm numeric variable `weight'
+    capture confirm numeric variable `wvar'
     if (_rc) {
-        di as err "weight() must be a numeric variable"
+        di as err "wvar() must be a numeric variable"
         exit 109
     }
 
@@ -136,7 +138,7 @@ program define _lorenz_table_new_bins, rclass
 
     quietly keep if `touse'
 
-    local keepvars `varlist' `weight'
+    local keepvars `varlist' `wvar'
     if ("`id'" != "") {
         local keepvars `keepvars' `id'
     }
@@ -145,7 +147,7 @@ program define _lorenz_table_new_bins, rclass
     }
     keep `keepvars'
 
-    quietly drop if missing(`varlist') | missing(`weight')
+    quietly drop if missing(`varlist') | missing(`wvar')
 
     quietly count
     if (r(N) == 0) {
@@ -153,14 +155,14 @@ program define _lorenz_table_new_bins, rclass
         exit 2000
     }
 
-    quietly count if `weight' < 0
+    quietly count if `wvar' < 0
     if (r(N) > 0) {
-        di as err "weight() must be nonnegative"
+        di as err "wvar() must be nonnegative"
         exit 459
     }
 
     generate double `welfare_var' = `varlist'
-    generate double `weight_var' = `weight'
+    generate double `weight_var' = `wvar'
 
     if ("`id'" == "") {
         generate double `id_var' = _n

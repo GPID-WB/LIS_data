@@ -28,7 +28,7 @@ local max_welfare = r(max)
 
 gen str8 reporting_level = "national"
 
-lorenz_table welfare, weight(weight) reporting(reporting_level) nq(1000)
+lorenz_table welfare, wvar(weight) reporting(reporting_level) nq(1000)
 
 gen str3   country_code  = "`country_code'"
 gen int    surveyid_year = `surveyid_year'
