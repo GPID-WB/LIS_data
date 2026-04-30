@@ -205,19 +205,18 @@ library(collapse)
 library(readstata13)
 
 ## For a Full Run
- silc <- c("at","be","bg","cz","dk","ee","fi","fr","de","gr","hu","is","ie","it","lt","lu","nl","no","pl","ro","rs","sk","si","es","se","ch","uk")
- nosilc <- c("au","br","ca","cl","cn","co","do","ge","gt","in","il","ci","jp","ml","mx","ps","pa","py","pe","ru","za","kr","tw","us","uy","vn")
+silc <- c("at","be","bg","cz","dk","ee","fi","fr","de","gr","hu","is","ie","it","lt","lu","nl","no","pl","ro","rs","sk","si","es","se","ch","uk")
+nosilc <- c("au","br","ca","cl","cn","co","do","ge","gt","in","il","ci","jp","ml","mx","ps","pa","py","pe","ru","za","kr","tw","us","uy","vn")
 
- # Build years 1963 through 2024 and extract last two digits
- years_full <- 1963:2024
- yrs <- formatC(years_full %% 100, width = 2, flag = "0") # "63", "64", ..., "24"
+# Build years from 1963 to the current year and extract last two digits
+years_full <- 1963:as.numeric(format(Sys.Date(), "%Y"))
+yrs <- formatC(years_full %% 100, width = 2, flag = "0") # "63", "64", ..., "24"
 
- # Combine countries
+# Combine countries
 countries <- c(silc, nosilc)
 
- # Build surveys: for each country and each two-digit year, create strings like "at63h"
- surveys <- as.vector(outer(countries, yrs,
-                            FUN = function(c, y) paste0(c, y, "h")))
+# Build surveys: for each country and each two-digit year, create strings like "at63h"
+surveys <- as.vector(outer(countries, yrs, FUN = function(c, y) paste0(c, y, "h")))
 
 # ## For Sample Data:
 # surveys <- c("us14ih.dta", "us16ih.dta", "us18ih.dta", "it14ih.dta", "it16ih.dta", "it20ih.dta", "mx16ih.dta", "mx14ih.dta", "mx18ih.dta")
@@ -276,11 +275,13 @@ LIS_bins_data <- function(file){
 }
 
 # Run for all files
-
 final <- rbindlist(lapply(surveys, LIS_bins_data))
 nrow(final) # It has to be a multiplier of the bins
 
 # Save file
-# save(final, file = "final.rds")
 
-readr::write_csv(final, paste0(USR_DIR, "mviver/", "wb_1000bin_append_Jan2026.csv"))
+# add current monthyear (Jan2026) to the filename for ease of versioning
+filename <- paste0("wb_1000bin_append_", format(Sys.Date(), "%b%Y"), ".csv")
+
+# destination folder is user-specific
+readr::write_csv(final, paste0(USR_DIR, "zsajai/", filename))
